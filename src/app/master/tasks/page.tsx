@@ -1,604 +1,665 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DesktopLayout from "@/components/layout/desktop-layout";
 import masterService from "@/services/master.service";
+import {
+  ClipboardList,
+  CheckCircle2,
+  Clock3,
+  Trophy,
+  Search,
+  Eye,
+} from "lucide-react";
 
 interface MyTask {
   id: string;
   matchScore: number;
   status: string;
   createdAt: string;
+
+  submission?: {
+    id: string;
+    status: "PENDING" | "APPROVED" | "REJECTED";
+  };
+
   project: {
     id: string;
     title: string;
     description: string;
     budget: number;
     requiredSkills: string;
-    status: string;
+    taskType: "DIGITAL" | "FIELD";
   };
 }
 
 export default function MyTasksPage() {
   const [tasks, setTasks] = useState<MyTask[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [submittedTask, setSubmittedTask] =
-    useState<string | null>(null);
-
-  const [showSuccess, setShowSuccess] =
-    useState(false);
-
+  const [search, setSearch] = useState("");
   const [selectedTask, setSelectedTask] =
     useState<MyTask | null>(null);
-
-  const [searchTerm, setSearchTerm] =
-    useState("");
 
   useEffect(() => {
     loadTasks();
   }, []);
 
-  const loadTasks = async () => {
+  async function loadTasks() {
     try {
       const data = await masterService.getMyTasks();
       setTasks(data);
-    } catch (error) {
-      console.error("Failed to load tasks", error);
+    } catch (err) {
+      console.log(err);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const filteredTasks = tasks.filter((task) =>
-    task.project.title
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) =>
+      task.project.title
+        .toLowerCase()
+        .includes(search.toLowerCase())
+    );
+  }, [tasks, search]);
 
-  const handleSubmitTask = (id: string) => {
-    setSubmittedTask(id);
-    setShowSuccess(true);
+  const totalTasks = tasks.length;
 
-    setTimeout(() => {
-      setShowSuccess(false);
-    }, 2000);
-  };
+  const accepted = tasks.filter(
+    (t) => t.status === "ACCEPTED"
+  ).length;
+
+  const review = tasks.filter(
+    (t) => t.submission?.status === "PENDING"
+  ).length;
+
+  const completed = tasks.filter(
+    (t) => t.submission?.status === "APPROVED"
+  ).length;
 
   return (
     <DesktopLayout>
+
       <div className="space-y-8">
 
         {/* Header */}
 
         <div>
+
           <h1 className="text-4xl font-bold text-white">
             My Tasks
           </h1>
 
           <p className="text-slate-400 mt-2">
-            Track all assigned tasks and monitor progress.
+            Track assigned projects, monitor submissions and view progress.
           </p>
+
         </div>
 
         {/* Search */}
 
-        <div className="mt-6">
+        <div className="relative">
+
+          <Search
+            size={20}
+            className="absolute left-4 top-3.5 text-slate-500"
+          />
 
           <input
-            type="text"
-            placeholder="Search tasks..."
-            value={searchTerm}
-            onChange={(e) =>
-              setSearchTerm(e.target.value)
-            }
+            placeholder="Search project..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             className="
               w-full
-              rounded-xl
-              border
-              border-white/[0.08]
+              rounded-2xl
               bg-slate-900
-              px-4
+              border
+              border-white/10
+              pl-12
+              pr-5
               py-3
-              text-white
               outline-none
+              text-white
             "
           />
 
         </div>
 
-        {/* Stats */}
+        {/* KPI Cards */}
 
-        <div className="grid grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
 
-          <div className="rounded-3xl border border-white/[0.08] bg-white/[0.03] p-6">
-            <p className="text-slate-400">
-              Applied Tasks
-            </p>
+          <div className="rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 border border-cyan-500/20 p-6">
 
-            <h2 className="text-3xl font-bold text-white mt-2">
-              {tasks.length}
-            </h2>
-          </div>
+            <div className="flex justify-between items-center">
 
-          <div className="rounded-3xl border border-white/[0.08] bg-white/[0.03] p-6">
+              <div>
 
-            <p className="text-slate-400">
-              Pending
-            </p>
+                <p className="text-slate-400">
+                  Total Tasks
+                </p>
 
-            <h2 className="text-3xl font-bold text-blue-400 mt-2">
-              {
-                tasks.filter(
-                  (t) => t.status === "PENDING"
-                ).length
-              }
-            </h2>
+                <h2 className="text-4xl font-bold text-white mt-3">
+                  {totalTasks}
+                </h2>
 
-          </div>
+              </div>
 
-          <div className="rounded-3xl border border-white/[0.08] bg-white/[0.03] p-6">
+              <ClipboardList
+                size={40}
+                className="text-cyan-400"
+              />
 
-            <p className="text-slate-400">
-              Accepted
-            </p>
-
-            <h2 className="text-3xl font-bold text-green-400 mt-2">
-              {
-                tasks.filter(
-                  (t) => t.status === "ACCEPTED"
-                ).length
-              }
-            </h2>
+            </div>
 
           </div>
 
-          <div className="rounded-3xl border border-white/[0.08] bg-white/[0.03] p-6">
+          <div className="rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 border border-green-500/20 p-6">
 
-            <p className="text-slate-400">
-              Average Match
-            </p>
+            <div className="flex justify-between items-center">
 
-            <h2 className="text-3xl font-bold text-yellow-400 mt-2">
+              <div>
 
-              {tasks.length > 0
-                ? Math.round(
-                    tasks.reduce(
-                      (sum, t) =>
-                        sum + t.matchScore,
-                      0
-                    ) / tasks.length
-                  )
-                : 0}
-              %
+                <p className="text-slate-400">
+                  Accepted
+                </p>
 
-            </h2>
+                <h2 className="text-4xl font-bold text-green-400 mt-3">
+                  {accepted}
+                </h2>
+
+              </div>
+
+              <CheckCircle2
+                size={40}
+                className="text-green-400"
+              />
+
+            </div>
+
+          </div>
+
+          <div className="rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 border border-yellow-500/20 p-6">
+
+            <div className="flex justify-between items-center">
+
+              <div>
+
+                <p className="text-slate-400">
+                  Under Review
+                </p>
+
+                <h2 className="text-4xl font-bold text-yellow-400 mt-3">
+                  {review}
+                </h2>
+
+              </div>
+
+              <Clock3
+                size={40}
+                className="text-yellow-400"
+              />
+
+            </div>
+
+          </div>
+
+          <div className="rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 border border-purple-500/20 p-6">
+
+            <div className="flex justify-between items-center">
+
+              <div>
+
+                <p className="text-slate-400">
+                  Completed
+                </p>
+
+                <h2 className="text-4xl font-bold text-purple-400 mt-3">
+                  {completed}
+                </h2>
+
+              </div>
+
+              <Trophy
+                size={40}
+                className="text-purple-400"
+              />
+
+            </div>
 
           </div>
 
         </div>
 
-        {/* Filters */}
+                {/* Task List */}
 
-        <div className="flex gap-3">
-
-          <button className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600">
-            All
-          </button>
-
-          <button className="px-4 py-2 rounded-xl border border-white/10">
-            Pending
-          </button>
-
-          <button className="px-4 py-2 rounded-xl border border-white/10">
-            Accepted
-          </button>
-
-        </div>
-
-        {/* Task Cards */}
-
-        <div className="grid md:grid-cols-2 gap-6">
         {loading ? (
 
-  <div className="col-span-2 text-center py-10 text-slate-400">
-    Loading tasks...
-  </div>
+          <div className="rounded-3xl border border-white/10 bg-slate-900 p-12 text-center text-slate-400">
+            Loading your tasks...
+          </div>
 
-) : filteredTasks.length === 0 ? (
+        ) : filteredTasks.length === 0 ? (
 
-  <div className="col-span-2 text-center py-10 text-slate-400">
-    No tasks found.
-  </div>
+          <div className="rounded-3xl border border-white/10 bg-slate-900 p-12 text-center">
 
-) : (
+            <ClipboardList
+              size={60}
+              className="mx-auto text-slate-600"
+            />
 
-  filteredTasks.map((task) => (
+            <h2 className="mt-6 text-2xl font-bold text-white">
+              No Tasks Found
+            </h2>
 
-    <div
-      key={task.id}
-      className="
-        rounded-3xl
-        border
-        border-white/[0.08]
-        bg-white/[0.03]
-        backdrop-blur-xl
-        shadow-[0_0_40px_rgba(59,130,246,0.08)]
-        p-6
-      "
-    >
-
-      <div className="flex justify-between items-start">
-
-        <div>
-
-          <h2 className="text-xl font-bold text-white">
-            {task.project.title}
-          </h2>
-
-          <p className="text-slate-400 mt-2 line-clamp-2">
-            {task.project.description}
-          </p>
-
-        </div>
-
-        <span className="px-3 py-1 rounded-full text-xs bg-blue-500/20 text-blue-400">
-          Digital
-        </span>
-
-      </div>
-
-      <div className="mt-5">
-
-        <p className="text-slate-500 text-sm">
-          Required Skills
-        </p>
-
-        <p className="text-white mt-1">
-          {task.project.requiredSkills}
-        </p>
-
-      </div>
-
-      <div className="mt-5">
-
-        <p className="text-slate-500 text-sm">
-          Budget
-        </p>
-
-        <p className="text-green-400 font-semibold text-lg">
-          ₹{task.project.budget.toLocaleString()}
-        </p>
-
-      </div>
-
-      <div className="mt-5">
-
-        <p className="text-slate-500 text-sm">
-          AI Match Score
-        </p>
-
-        <p className="text-cyan-400 font-semibold">
-          {Math.round(task.matchScore)}%
-        </p>
-
-      </div>
-
-      <div className="flex justify-between items-center mt-6">
-
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-semibold ${
-            task.status === "PENDING"
-              ? "bg-yellow-500/20 text-yellow-400"
-              : task.status === "ACCEPTED"
-              ? "bg-green-500/20 text-green-400"
-              : task.status === "REJECTED"
-              ? "bg-red-500/20 text-red-400"
-              : "bg-blue-500/20 text-blue-400"
-          }`}
-        >
-          {submittedTask === task.id
-            ? "Submitted"
-            : task.status}
-        </span>
-
-        <div className="flex gap-2">
-
-          <button
-            onClick={() => setSelectedTask(task)}
-            className="
-              px-4
-              py-2
-              rounded-xl
-              border
-              border-white/[0.08]
-            "
-          >
-            View
-          </button>
-
-          <button
-            onClick={() =>
-              handleSubmitTask(task.id)
-            }
-            className="
-              px-4
-              py-2
-              rounded-xl
-              bg-gradient-to-r
-              from-blue-600
-              to-purple-600
-              hover:from-blue-500
-              hover:to-purple-500
-            "
-          >
-            Submit
-          </button>
-
-        </div>
-
-      </div>
-
-    </div>
-
-  ))
-
-)}
-
-</div>
-        {/* AI Productivity Insights */}
-
-        <div
-          className="
-            rounded-3xl
-            border
-            border-white/[0.08]
-            bg-white/[0.03]
-            backdrop-blur-xl
-            shadow-[0_0_40px_rgba(59,130,246,0.08)]
-            p-8
-          "
-        >
-          <h2 className="text-2xl font-bold mb-6">
-            🤖 AI Productivity Insights
-          </h2>
-
-          <div className="grid md:grid-cols-4 gap-6">
-
-            <div>
-              <p className="text-slate-400">
-                Applications
-              </p>
-
-              <h3 className="text-blue-400 text-xl font-bold mt-2">
-                {tasks.length}
-              </h3>
-            </div>
-
-            <div>
-              <p className="text-slate-400">
-                Average Match
-              </p>
-
-              <h3 className="text-green-400 text-xl font-bold mt-2">
-                {tasks.length > 0
-                  ? Math.round(
-                      tasks.reduce(
-                        (sum, task) =>
-                          sum + task.matchScore,
-                        0
-                      ) / tasks.length
-                    )
-                  : 0}
-                %
-              </h3>
-            </div>
-
-            <div>
-              <p className="text-slate-400">
-                Accepted
-              </p>
-
-              <h3 className="text-purple-400 text-xl font-bold mt-2">
-                {
-                  tasks.filter(
-                    (task) =>
-                      task.status === "ACCEPTED"
-                  ).length
-                }
-              </h3>
-            </div>
-
-            <div>
-              <p className="text-slate-400">
-                Pending
-              </p>
-
-              <h3 className="text-yellow-400 text-xl font-bold mt-2">
-                {
-                  tasks.filter(
-                    (task) =>
-                      task.status === "PENDING"
-                  ).length
-                }
-              </h3>
-            </div>
+            <p className="mt-2 text-slate-400">
+              Apply for projects to see them here.
+            </p>
 
           </div>
 
-        </div>
+        ) : (
 
-        {/* View Task Modal */}
+          <div className="grid lg:grid-cols-2 gap-6">
 
-        {selectedTask && (
+            {filteredTasks.map((task) => (
 
-          <div
-            className="
-              fixed
-              inset-0
-              bg-black/60
-              backdrop-blur-sm
-              flex
-              items-center
-              justify-center
-              z-50
-            "
-          >
+              <div
+                key={task.id}
+                className="
+                  rounded-3xl
+                  border
+                  border-white/10
+                  bg-slate-900
+                  p-7
+                  transition-all
+                  duration-300
+                  hover:border-cyan-500/40
+                  hover:-translate-y-1
+                "
+              >
 
-            <div
-              className="
-                w-[550px]
-                rounded-3xl
-                bg-slate-950
-                border
-                border-white/[0.08]
-                p-8
-              "
-            >
+                {/* Top */}
 
-              <h2 className="text-2xl font-bold text-white mb-6">
-                Project Details
-              </h2>
+                <div className="flex justify-between items-start">
 
-              <div className="space-y-4">
+                  <div>
 
-                <div>
-                  <p className="text-slate-500">
-                    Project
-                  </p>
+                    <h2 className="text-2xl font-bold text-white">
+                      {task.project.title}
+                    </h2>
 
-                  <p className="text-white">
-                    {selectedTask.project.title}
-                  </p>
+                    <p className="mt-2 text-slate-400 line-clamp-2">
+                      {task.project.description}
+                    </p>
+
+                  </div>
+
+                  <span
+                    className={`
+                      px-4
+                      py-2
+                      rounded-full
+                      text-xs
+                      font-semibold
+
+                      ${
+                        task.submission?.status === "APPROVED"
+                          ? "bg-green-500/20 text-green-400"
+                          : task.submission?.status === "REJECTED"
+                          ? "bg-red-500/20 text-red-400"
+                          : task.submission?.status === "PENDING"
+                          ? "bg-yellow-500/20 text-yellow-400"
+                          : "bg-blue-500/20 text-blue-400"
+                      }
+                    `}
+                  >
+                    {task.submission
+                      ? task.submission.status
+                      : task.status}
+                  </span>
+
                 </div>
 
-                <div>
-                  <p className="text-slate-500">
-                    Description
-                  </p>
+                {/* Information */}
 
-                  <p className="text-white">
-                    {selectedTask.project.description}
-                  </p>
+                <div className="grid grid-cols-2 gap-5 mt-7">
+
+                  <div>
+
+                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                      Task Type
+                    </p>
+
+                    <span
+                      className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold ${
+                        task.project.taskType === "DIGITAL"
+                          ? "bg-cyan-500/20 text-cyan-400"
+                          : "bg-orange-500/20 text-orange-400"
+                      }`}
+                    >
+                      {task.project.taskType}
+                    </span>
+
+                  </div>
+
+                  <div>
+
+                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                      Budget
+                    </p>
+
+                    <p className="mt-2 text-lg font-bold text-green-400">
+                      ₹{task.project.budget.toLocaleString()}
+                    </p>
+
+                  </div>
+
+                  <div>
+
+                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                      AI Match
+                    </p>
+
+                    <p className="mt-2 text-lg font-bold text-purple-400">
+                      {Math.round(task.matchScore)}%
+                    </p>
+
+                  </div>
+
+                  <div>
+
+                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                      Skills
+                    </p>
+
+                    <p className="mt-2 text-white">
+                      {task.project.requiredSkills}
+                    </p>
+
+                  </div>
+
                 </div>
 
-                <div>
-                  <p className="text-slate-500">
-                    Required Skills
-                  </p>
+                                {/* Progress */}
 
-                  <p className="text-blue-400">
-                    {selectedTask.project.requiredSkills}
-                  </p>
-                </div>
+                <div className="mt-7 rounded-2xl border border-white/10 bg-black/20 p-5">
 
-                <div>
-                  <p className="text-slate-500">
-                    Budget
-                  </p>
+                  <div className="flex justify-between items-center">
 
-                  <p className="text-green-400">
-                    ₹
-                    {selectedTask.project.budget.toLocaleString()}
-                  </p>
-                </div>
+                    <p className="text-sm font-medium text-slate-300">
+                      Task Progress
+                    </p>
 
-                <div>
-                  <p className="text-slate-500">
-                    AI Match Score
-                  </p>
+                    <span className="text-sm text-slate-400">
 
-                  <p className="text-cyan-400">
-                    {Math.round(
-                      selectedTask.matchScore
+                      {!task.submission
+                        ? "40%"
+                        : task.submission.status === "PENDING"
+                        ? "80%"
+                        : task.submission.status === "APPROVED"
+                        ? "100%"
+                        : "60%"}
+
+                    </span>
+
+                  </div>
+
+                  <div className="mt-3 h-2 rounded-full bg-slate-800">
+
+                    <div
+                      className="h-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-700"
+                      style={{
+                        width:
+                          !task.submission
+                            ? "40%"
+                            : task.submission.status === "PENDING"
+                            ? "80%"
+                            : task.submission.status === "APPROVED"
+                            ? "100%"
+                            : "60%",
+                      }}
+                    />
+
+                  </div>
+
+                  <div className="mt-5">
+
+                    {!task.submission && (
+
+                      <p className="text-cyan-400 text-sm">
+                        📌 Complete this project and submit it from the
+                        <span className="font-semibold">
+                          {" "}Submit Work
+                        </span>
+                        {" "}page.
+                      </p>
+
                     )}
-                    %
-                  </p>
+
+                    {task.submission?.status === "PENDING" && (
+
+                      <p className="text-yellow-400 text-sm">
+                        ⏳ Your work has been submitted successfully and is waiting for provider review.
+                      </p>
+
+                    )}
+
+                    {task.submission?.status === "APPROVED" && (
+
+                      <p className="text-green-400 text-sm">
+                        🎉 Great work! Your submission has been approved.
+                      </p>
+
+                    )}
+
+                    {task.submission?.status === "REJECTED" && (
+
+                      <p className="text-red-400 text-sm">
+                        ❌ Your submission was rejected. Please update your work and submit again.
+                      </p>
+
+                    )}
+
+                  </div>
+
                 </div>
 
-                <div>
-                  <p className="text-slate-500">
-                    Application Status
-                  </p>
+                {/* Footer */}
 
-                  <p className="text-yellow-400">
-                    {selectedTask.status}
-                  </p>
+                <div className="mt-7 flex justify-end">
+
+                  <button
+                    onClick={() => setSelectedTask(task)}
+                    className="
+                      flex
+                      items-center
+                      gap-2
+                      rounded-xl
+                      bg-gradient-to-r
+                      from-cyan-600
+                      to-blue-600
+                      px-6
+                      py-3
+                      font-medium
+                      text-white
+                      transition-all
+                      duration-300
+                      hover:scale-105
+                    "
+                  >
+                    <Eye size={18} />
+                    View Details
+                  </button>
+
                 </div>
 
               </div>
 
+            ))}
+
+          </div>
+
+        )}
+
+              {/* Project Details Modal */}
+
+      {selectedTask && (
+
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md">
+
+          <div className="w-full max-w-3xl rounded-3xl border border-white/10 bg-slate-900 p-8 shadow-2xl">
+
+            {/* Header */}
+
+            <div className="flex items-start justify-between">
+
+              <div>
+
+                <h2 className="text-3xl font-bold text-white">
+                  {selectedTask.project.title}
+                </h2>
+
+                <p className="mt-2 text-slate-400">
+                  Complete project information
+                </p>
+
+                <p className="mt-2 text-sm text-slate-500">
+                  Assigned on{" "}
+                  {new Date(selectedTask.createdAt).toLocaleDateString()}
+                </p>
+
+              </div>
+
               <button
-                onClick={() =>
-                  setSelectedTask(null)
-                }
-                className="
-                  mt-8
-                  w-full
-                  py-3
-                  rounded-xl
-                  bg-gradient-to-r
-                  from-blue-600
-                  to-purple-600
-                "
+                onClick={() => setSelectedTask(null)}
+                className="rounded-xl border border-white/10 px-4 py-2 text-slate-300 hover:bg-white/10"
               >
                 Close
               </button>
 
             </div>
 
-          </div>
+            {/* Description */}
 
-        )}
+            <div className="mt-8">
 
-        {/* Success Popup */}
+              <h3 className="mb-3 text-lg font-semibold text-white">
+                Description
+              </h3>
 
-        {showSuccess && (
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-5 whitespace-pre-wrap text-slate-300">
 
-          <div
-            className="
-              fixed
-              inset-0
-              bg-black/60
-              backdrop-blur-sm
-              flex
-              items-center
-              justify-center
-              z-50
-            "
-          >
+                {selectedTask.project.description}
 
-            <div
-              className="
-                bg-slate-950
-                border
-                border-green-500/20
-                rounded-3xl
-                p-8
-                text-center
-                w-[420px]
-              "
-            >
-
-              <div className="text-6xl mb-4">
-                🎉
               </div>
 
-              <h2 className="text-2xl font-bold text-white">
-                Task Submitted
-              </h2>
+            </div>
 
-              <p className="text-slate-400 mt-3">
-                Waiting for client approval.
-              </p>
+            {/* Details */}
+
+            <div className="mt-8 grid grid-cols-2 gap-6">
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+
+                <p className="text-sm text-slate-500">
+                  Task Type
+                </p>
+
+                <span
+                  className={`inline-block mt-3 rounded-full px-3 py-1 text-sm font-semibold ${
+                    selectedTask.project.taskType === "DIGITAL"
+                      ? "bg-cyan-500/20 text-cyan-400"
+                      : "bg-orange-500/20 text-orange-400"
+                  }`}
+                >
+                  {selectedTask.project.taskType}
+                </span>
+
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+
+                <p className="text-sm text-slate-500">
+                  Budget
+                </p>
+
+                <p className="mt-3 text-xl font-bold text-green-400">
+                  ₹{selectedTask.project.budget.toLocaleString()}
+                </p>
+
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+
+                <p className="text-sm text-slate-500">
+                  Required Skills
+                </p>
+
+                <p className="mt-3 text-white">
+                  {selectedTask.project.requiredSkills}
+                </p>
+
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+
+                <p className="text-sm text-slate-500">
+                  AI Match
+                </p>
+
+                <p className="mt-3 text-xl font-bold text-purple-400">
+                  {Math.round(selectedTask.matchScore)}%
+                </p>
+
+              </div>
+
+            </div>
+
+            {/* Status */}
+
+            <div className="mt-8 rounded-2xl border border-white/10 bg-black/20 p-5">
+
+              <h3 className="mb-4 text-lg font-semibold text-white">
+                Current Status
+              </h3>
+
+              {!selectedTask.submission && (
+                <p className="text-cyan-400">
+                  📌 Complete your assigned work and submit it from the Submit Work page.
+                </p>
+              )}
+
+              {selectedTask.submission?.status === "PENDING" && (
+                <p className="text-yellow-400">
+                  ⏳ Your work is currently under provider review.
+                </p>
+              )}
+
+              {selectedTask.submission?.status === "APPROVED" && (
+                <p className="text-green-400">
+                  🎉 Congratulations! Your work has been approved successfully.
+                </p>
+              )}
+
+              {selectedTask.submission?.status === "REJECTED" && (
+                <p className="text-red-400">
+                  ❌ Your work was rejected. Please improve it and submit again.
+                </p>
+              )}
 
             </div>
 
           </div>
 
-        )}
+        </div>
 
-      </div>
+      )}
+
+
+            </div>
+
     </DesktopLayout>
+
   );
 }

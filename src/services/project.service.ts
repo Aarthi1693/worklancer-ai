@@ -5,6 +5,7 @@ export interface CreateProjectDto {
   description: string;
   budget: number;
   requiredSkills: string;
+  taskType: "DIGITAL" | "FIELD";
 }
 
 class ProjectService {
@@ -29,6 +30,4 @@ class ProjectService {
   }
 }
 
-const projectService = new ProjectService();
-
-export default projectService;
+export default new ProjectService();

@@ -14,6 +14,7 @@ import {
   PlusCircle,
   MessageSquare,
   Bell,
+  Upload,
 } from "lucide-react";
 
 
@@ -40,11 +41,6 @@ const providerMenu = [
     href: "/provider/team",
   },
   {
-    title: "Analytics",
-    icon: BarChart3,
-    href: "/provider/analytics",
-  },
-  {
     title: "Payments",
     icon: CreditCard,
     href: "/provider/payments",
@@ -59,6 +55,18 @@ const providerMenu = [
     icon: ClipboardList,
     href: "/provider/task-management",
   },
+  {
+  title: "Applicants",
+  href: "/provider/applicants",
+  icon: Users,
+  },
+
+  {
+  title: "Submitted Work",
+  icon: Upload,
+  href: "/provider/submissions",
+  },
+
   {
     title: "Settings",
     icon: Settings,
@@ -91,6 +99,11 @@ const masterMenu = [
     title: "My Tasks",
     icon: Briefcase,
     href: "/master/tasks",
+  },
+  {
+  title: "Submit Work",
+  icon: Upload,
+  href: "/master/submit-work",
   },
   {
     title: "Earnings",

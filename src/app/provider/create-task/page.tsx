@@ -39,11 +39,12 @@ const [rewardAmount, setRewardAmount] = useState("");
       setLoading(true);
 
       await projectService.createProject({
-        title,
-        description,
-        budget: Number(budget),
-        requiredSkills,
-      });
+  title,
+  description,
+  budget: Number(budget),
+  requiredSkills,
+  taskType: "DIGITAL",
+});
 
       setShowSuccess(true);
 
@@ -67,20 +68,34 @@ const [rewardAmount, setRewardAmount] = useState("");
   }
 
   // -----------------------------
-  // ON-FIELD TASK
-  // -----------------------------
-  if (
-    !fieldTitle ||
-    !pickupLocation ||
-    !dropLocation ||
-    !fieldDescription ||
-    !rewardAmount
-  ) {
-    alert("Please fill all the required fields.");
-    return;
-  }
+// ON-FIELD TASK
+// -----------------------------
+if (
+  !fieldTitle ||
+  !pickupLocation ||
+  !dropLocation ||
+  !fieldDescription ||
+  !rewardAmount
+) {
+  alert("Please fill all the required fields.");
+  return;
+}
 
-  // Temporary behaviour until backend is created
+try {
+  setLoading(true);
+
+  await projectService.createProject({
+    title: fieldTitle,
+    description: `${fieldDescription}
+
+Pickup: ${pickupLocation}
+
+Drop: ${dropLocation}`,
+    budget: Number(rewardAmount),
+    requiredSkills: "Field Work",
+    taskType: "FIELD",
+  });
+
   setShowSuccess(true);
 
   setFieldTitle("");
@@ -93,6 +108,12 @@ const [rewardAmount, setRewardAmount] = useState("");
     setShowSuccess(false);
     router.push("/provider");
   }, 2000);
+} catch (error) {
+  console.error(error);
+  alert("Failed to create field task.");
+} finally {
+  setLoading(false);
+}
 };
 
   return (

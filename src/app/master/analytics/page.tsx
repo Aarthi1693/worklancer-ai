@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import masterAnalyticsService from "@/services/master-analytics.service";
 import DesktopLayout from "@/components/layout/desktop-layout";
 
 import {
@@ -14,6 +16,31 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
+
+interface Analytics {
+  acceptedTasks: number;
+  completedTasks: number;
+  pendingReview: number;
+  rejected: number;
+  earnings: number;
+  successRate: number;
+  averageRating: number;
+
+  weeklyPerformance: {
+  day: string;
+  value: number;
+}[];
+
+  monthlyGrowth: {
+    month: string;
+    value: number;
+  }[];
+
+  skillDistribution: {
+    name: string;
+    value: number;
+  }[];
+}
 
 const feedbacks = [
   {
@@ -33,45 +60,6 @@ const feedbacks = [
   },
 ];
 
-const skillData = [
-  { name: "UI/UX Design", value: 30 },
-  { name: "Frontend", value: 28 },
-  { name: "Communication", value: 24 },
-  { name: "AI Integration", value: 18 },
-];
-
-const taskOverview = [
-  {
-    title: "Completed",
-    value: 18,
-    color: "text-green-400",
-  },
-  {
-    title: "In Progress",
-    value: 8,
-    color: "text-blue-400",
-  },
-  {
-    title: "Pending",
-    value: 4,
-    color: "text-yellow-400",
-  },
-  {
-    title: "Review",
-    value: 2,
-    color: "text-purple-400",
-  },
-];
-
-const growthData = [
-  { month: "Jan", growth: 8 },
-  { month: "Feb", growth: 12 },
-  { month: "Mar", growth: 15 },
-  { month: "Apr", growth: 18 },
-  { month: "May", growth: 21 },
-  { month: "Jun", growth: 22 },
-];
-
 const COLORS = [
   "#3B82F6",
   "#8B5CF6",
@@ -80,6 +68,76 @@ const COLORS = [
 ];
 
 export default function AnalyticsPage() {
+  const [analytics, setAnalytics] =
+  useState<Analytics | null>(null);
+
+const [loading, setLoading] =
+  useState(true);
+
+useEffect(() => {
+  loadAnalytics();
+}, []);
+
+async function loadAnalytics() {
+  try {
+    const data =
+      await masterAnalyticsService.getAnalytics();
+
+    setAnalytics(data);
+  } catch (err) {
+    console.log(err);
+  } finally {
+    setLoading(false);
+  }
+}
+
+if (loading) {
+  return (
+    <DesktopLayout>
+      <div className="flex justify-center items-center h-[70vh] text-white text-xl">
+        Loading Analytics...
+      </div>
+    </DesktopLayout>
+  );
+}
+
+if (!analytics) {
+  return (
+    <DesktopLayout>
+      <div className="flex justify-center items-center h-[70vh] text-red-400">
+        Failed to load analytics.
+      </div>
+    </DesktopLayout>
+  );
+}
+const skillData = analytics.skillDistribution;
+
+const growthData = analytics.monthlyGrowth;
+
+const weeklyPerformance = analytics.weeklyPerformance;
+
+const taskOverview = [
+  {
+    title: "Accepted",
+    value: analytics.acceptedTasks,
+    color: "text-blue-400",
+  },
+  {
+    title: "Completed",
+    value: analytics.completedTasks,
+    color: "text-green-400",
+  },
+  {
+    title: "Pending Review",
+    value: analytics.pendingReview,
+    color: "text-yellow-400",
+  },
+  {
+    title: "Rejected",
+    value: analytics.rejected,
+    color: "text-red-400",
+  },
+];
   return (
     <DesktopLayout>
       <div className="max-w-7xl mx-auto space-y-8">
@@ -105,8 +163,8 @@ export default function AnalyticsPage() {
             </p>
 
             <h2 className="text-3xl font-bold text-green-400 mt-2">
-              98%
-            </h2>
+  {analytics.successRate}%
+</h2>
           </div>
 
           <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6">
@@ -115,28 +173,28 @@ export default function AnalyticsPage() {
             </p>
 
             <h2 className="text-3xl font-bold text-yellow-400 mt-2">
-              4.9★
-            </h2>
+  {analytics.averageRating}★
+</h2>
+          </div>
+
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6">
+           <p className="text-slate-400 text-sm">
+  Completed Tasks
+</p>
+
+<h2 className="text-3xl font-bold text-blue-400 mt-2">
+  {analytics.completedTasks}
+</h2>
           </div>
 
           <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6">
             <p className="text-slate-400 text-sm">
-              Projects Completed
-            </p>
+  Total Earnings
+</p>
 
-            <h2 className="text-3xl font-bold text-blue-400 mt-2">
-              127
-            </h2>
-          </div>
-
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6">
-            <p className="text-slate-400 text-sm">
-              Revenue Generated
-            </p>
-
-            <h2 className="text-3xl font-bold text-purple-400 mt-2">
-              ₹2.45L
-            </h2>
+<h2 className="text-3xl font-bold text-purple-400 mt-2">
+  ₹{analytics.earnings.toLocaleString()}
+</h2>
           </div>
 
         </div>
@@ -148,27 +206,19 @@ export default function AnalyticsPage() {
             Weekly Performance
           </h2>
 
-          {[
-            ["Monday", 75],
-            ["Tuesday", 82],
-            ["Wednesday", 88],
-            ["Thursday", 91],
-            ["Friday", 96],
-            ["Saturday", 85],
-            ["Sunday", 92],
-          ].map(([day, value]) => (
-            <div key={day} className="mb-5">
+          {weeklyPerformance.map((item) => (
+            <div key={item.day} className="mb-5">
 
               <div className="flex justify-between mb-2">
-                <span>{day}</span>
-                <span>{value}%</span>
+                <span>{item.day}</span>
+                <span>{item.value}%</span>
               </div>
 
               <div className="h-2 rounded-full bg-slate-700">
                 <div
                   className="h-2 rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 transition-all duration-1000"
                   style={{
-                    width: `${value}%`,
+                    width:`${item.value}%`,
                   }}
                 />
               </div>
@@ -192,23 +242,32 @@ export default function AnalyticsPage() {
     <div className="space-y-5">
 
       <div className="flex justify-between">
-        <span>Tasks Completed</span>
-        <span className="text-green-400">18</span>
-      </div>
+  <span>Tasks Completed</span>
+
+  <span className="text-green-400">
+    {analytics.completedTasks}
+  </span>
+</div>
 
       <div className="flex justify-between">
         <span>Completion Time</span>
-        <span className="text-blue-400">2.3 Days</span>
+        <span className="text-blue-400">
+  2.5 Days
+</span>
       </div>
 
       <div className="flex justify-between">
         <span>Pending Reviews</span>
-        <span className="text-yellow-400">4</span>
+<span className="text-yellow-400">
+  {analytics.pendingReview}
+</span>
       </div>
 
       <div className="flex justify-between">
         <span>Client Retention</span>
-        <span className="text-purple-400">87%</span>
+<span className="text-purple-400">
+  {analytics.successRate}%
+</span>
       </div>
 
     </div>
@@ -379,7 +438,7 @@ export default function AnalyticsPage() {
 
                 <Line
   type="monotone"
-  dataKey="growth"
+  dataKey="value"
   stroke="#3B82F6"
   strokeWidth={4}
   dot={{

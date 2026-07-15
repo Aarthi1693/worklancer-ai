@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import masterService from "@/services/master.service";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+
 import DesktopLayout from "@/components/layout/desktop-layout";
+import masterService from "@/services/master.service";
 import applicationService from "@/services/application.service";
 import authService from "@/services/auth.service";
 
@@ -14,295 +15,303 @@ interface Project {
   budget: number;
   requiredSkills: string;
   status: string;
+  taskType: "DIGITAL" | "FIELD";
 }
 
 export default function AvailableTasksPage() {
   const router = useRouter();
-  const [showSuccess, setShowSuccess] = useState(false);
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
-  fetchProjects();
-}, []);
+    fetchProjects();
+  }, []);
 
-const fetchProjects = async () => {
-  try {
-    const data = await masterService.getProjects();
-    setProjects(data);
-  } catch (error) {
-    console.error(error);
-  } finally {
-    setLoading(false);
+  async function fetchProjects() {
+    try {
+      setLoading(true);
+
+      const data = await masterService.getProjects();
+
+      setProjects(
+        data.filter(
+          (project: Project) =>
+            project.status === "OPEN"
+        )
+      );
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   }
-};
 
-const handleApply = async (projectId: string) => {
-  try {
-    const user = authService.getUser();
+  const digitalProjects = useMemo(
+    () =>
+      projects.filter(
+        (project) => project.taskType === "DIGITAL"
+      ),
+    [projects]
+  );
 
-    console.log("Current User:", user);
-    console.log("User ID:", user?.id);
-    console.log("Project ID:", projectId);
+  const fieldProjects = useMemo(
+    () =>
+      projects.filter(
+        (project) => project.taskType === "FIELD"
+      ),
+    [projects]
+  );
 
-    const payload = {
-      userId: user?.id,
-      projectId,
-    };
+  async function handleApply(projectId: string) {
+    try {
+      const user = authService.getUser();
 
-    console.log("Payload:", payload);
+      if (!user?.id) {
+        alert("Please login again.");
+        return;
+      }
 
-    await applicationService.apply(payload);
+      console.log("Logged in user:", user);
+      console.log("Applying with userId:", user.id);
+      console.log("Project:", projectId); 
 
-    setShowSuccess(true);
+      await applicationService.apply({
+        userId: user.id,
+        projectId,
+      });
 
-    setTimeout(() => {
-      router.push("/master/tasks");
-    }, 2000);
-  } catch (error: any) {
-    console.log("Backend Error:", error.response?.data);
-    console.log(error);
+      setShowSuccess(true);
 
-    alert("Failed to apply for project.");
+      setTimeout(() => {
+        router.push("/master/tasks");
+      }, 1800);
+
+    } catch (error: any) {
+      console.error(error);
+
+      alert(
+        error?.response?.data?.message ??
+          "Failed to apply."
+      );
+    }
   }
-};
 
-  return (
-    <DesktopLayout>
-      <div className="space-y-8">
+return (
+   <DesktopLayout>
+    <div className="space-y-8">
 
-        <div>
-          <h1 className="text-4xl font-bold text-white">
-            Available Tasks
-          </h1>
+  {/* Header */}
 
-          <p className="text-slate-400 mt-2">
-            Discover tasks that match your skills and interests.
-          </p>
-        </div>
+  <div>
+    <h1 className="text-4xl font-bold text-white">
+      Available Tasks
+    </h1>
 
-        <div className="grid grid-cols-4 gap-6">
-
-          <div className="rounded-3xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6">
-            <p className="text-slate-400">Total Opportunities</p>
-            <h2 className="text-3xl font-bold text-white mt-2">48</h2>
-          </div>
-
-          <div className="rounded-3xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6">
-            <p className="text-slate-400">Digital Tasks</p>
-            <h2 className="text-3xl font-bold text-blue-400 mt-2">34</h2>
-          </div>
-
-          <div className="rounded-3xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6">
-            <p className="text-slate-400">On-Field Tasks</p>
-            <h2 className="text-3xl font-bold text-purple-400 mt-2">14</h2>
-          </div>
-
-          <div className="rounded-3xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6">
-            <p className="text-slate-400">AI Match Score</p>
-            <h2 className="text-3xl font-bold text-green-400 mt-2">94%</h2>
-          </div>
-
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-6">
-
-  {loading ? (
-
-    <p className="text-slate-400">
-      Loading projects...
+    <p className="text-slate-400 mt-2">
+      Discover projects matching your skills.
     </p>
+  </div>
 
-  ) : (
+  {/* Statistics */}
 
-    projects.map((project) => (
+  <div className="grid grid-cols-4 gap-6">
 
-      <div
-        key={project.id}
-        className="
-          rounded-3xl
-          border
-          border-white/[0.08]
-          bg-white/[0.03]
-          backdrop-blur-xl
-          shadow-[0_0_40px_rgba(59,130,246,0.08)]
-          p-6
-        "
-      >
-
-        <h2 className="text-xl font-bold">
-          {project.title}
-        </h2>
-
-        <p className="text-slate-400 mt-2">
-          {project.requiredSkills}
-        </p>
-
-        <p className="text-slate-500 mt-3 line-clamp-2">
-          {project.description}
-        </p>
-
-        <p className="text-green-400 mt-5 text-xl font-semibold">
-          ₹{project.budget.toLocaleString()}
-        </p>
-
-        <div className="flex justify-between items-center mt-5">
-
-          <span
-            className={`
-              px-3
-              py-1
-              rounded-full
-              text-xs
-              ${
-                project.status === "OPEN"
-                  ? "bg-green-500/20 text-green-400"
-                  : "bg-blue-500/20 text-blue-400"
-              }
-            `}
-          >
-            {project.status}
-          </span>
-
-          <button
-            onClick={() => handleApply(project.id)}
-            className="
-              px-5
-              py-2
-              rounded-xl
-              bg-gradient-to-r
-              from-blue-600
-              to-purple-600
-              hover:from-blue-500
-              hover:to-purple-500
-            "
-          >
-            Apply
-          </button>
-
-        </div>
-
-      </div>
-
-    ))
-
-  )}
-
-</div>
-
-        {/* On-Field Opportunities */}
-
-<div>
-
-  <h2 className="text-2xl font-bold text-white">
-    On-Field Opportunities
-  </h2>
-
-  <div className="grid md:grid-cols-2 gap-6 mt-6">
-
-    <div className="rounded-3xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6">
-
-      <h2 className="text-xl font-bold">
-        Deliver Laptop
+    <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+      <p className="text-slate-400">Total Projects</p>
+      <h2 className="text-3xl font-bold mt-2">
+        {projects.length}
       </h2>
-
-      <p className="text-slate-400 mt-2">
-        Electronic City → Whitefield
-      </p>
-
-      <div className="flex justify-between mt-5">
-
-        <div>
-          <p className="text-slate-500 text-sm">
-            Reward
-          </p>
-
-          <p className="text-green-400 font-semibold">
-            ₹350
-          </p>
-        </div>
-
-        <div>
-          <p className="text-slate-500 text-sm">
-            Distance
-          </p>
-
-          <p className="text-white">
-            12 KM
-          </p>
-        </div>
-
-      </div>
-
-      <button
-        onClick={handleApply}
-        className="
-          mt-6
-          w-full
-          py-3
-          rounded-xl
-          bg-purple-600
-          hover:bg-purple-700
-        "
-      >
-        Accept Delivery
-      </button>
-
     </div>
 
-    <div className="rounded-3xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6">
-
-      <h2 className="text-xl font-bold">
-        Collect Documents
+    <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+      <p className="text-slate-400">Digital</p>
+      <h2 className="text-3xl font-bold text-cyan-400 mt-2">
+        {digitalProjects.length}
       </h2>
+    </div>
 
-      <p className="text-slate-400 mt-2">
-        Koramangala → MG Road
-      </p>
+    <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+      <p className="text-slate-400">Field</p>
+      <h2 className="text-3xl font-bold text-orange-400 mt-2">
+        {fieldProjects.length}
+      </h2>
+    </div>
 
-      <div className="flex justify-between mt-5">
-
-        <div>
-          <p className="text-slate-500 text-sm">
-            Reward
-          </p>
-
-          <p className="text-green-400 font-semibold">
-            ₹250
-          </p>
-        </div>
-
-        <div>
-          <p className="text-slate-500 text-sm">
-            Distance
-          </p>
-
-          <p className="text-white">
-            8 KM
-          </p>
-        </div>
-
-      </div>
-
-      <button
-        onClick={handleApply}
-        className="
-          mt-6
-          w-full
-          py-3
-          rounded-xl
-          bg-purple-600
-          hover:bg-purple-700
-        "
-      >
-        Accept Delivery
-      </button>
-
+    <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+      <p className="text-slate-400">Open Tasks</p>
+      <h2 className="text-3xl font-bold text-green-400 mt-2">
+        {projects.length}
+      </h2>
     </div>
 
   </div>
 
-</div>
+  {loading ? (
+
+    <div className="text-center py-20 text-slate-400">
+      Loading Projects...
+    </div>
+
+  ) : (
+
+    <>
+      {/* DIGITAL */}
+
+      <div>
+
+        <h2 className="text-2xl font-bold text-cyan-400 mb-6">
+          💻 Digital Projects
+        </h2>
+
+        <div className="grid md:grid-cols-2 gap-6">
+
+          {digitalProjects.length === 0 ? (
+
+            <div className="text-slate-400">
+              No Digital Projects
+            </div>
+
+          ) : (
+
+            digitalProjects.map((project) => (
+
+              <div
+                key={project.id}
+                className="
+                  rounded-3xl
+                  border
+                  border-cyan-500/20
+                  bg-white/[0.03]
+                  p-6
+                "
+              >
+
+                <div className="flex justify-between">
+
+                  <h2 className="text-xl font-bold">
+                    {project.title}
+                  </h2>
+
+                  <span className="px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-400 text-xs">
+                    DIGITAL
+                  </span>
+
+                </div>
+
+                <p className="text-slate-400 mt-4 line-clamp-2">
+                  {project.description}
+                </p>
+
+                <p className="text-slate-500 mt-5">
+                  {project.requiredSkills}
+                </p>
+
+                <div className="flex justify-between items-center mt-6">
+
+                  <h3 className="text-green-400 text-xl font-bold">
+                    ₹{project.budget.toLocaleString()}
+                  </h3>
+
+                  <button
+                    onClick={() => handleApply(project.id)}
+                    className="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500"
+                  >
+                    Apply
+                  </button>
+
+                </div>
+
+              </div>
+
+            ))
+
+          )}
+
+        </div>
+
+      </div>
+
+      {/* FIELD */}
+
+      <div className="mt-12">
+
+        <h2 className="text-2xl font-bold text-orange-400 mb-6">
+          📍 Field Projects
+        </h2>
+
+        <div className="grid md:grid-cols-2 gap-6">
+
+          {fieldProjects.length === 0 ? (
+
+            <div className="text-slate-400">
+              No Field Projects
+            </div>
+
+          ) : (
+
+            fieldProjects.map((project) => (
+
+              <div
+                key={project.id}
+                className="
+                  rounded-3xl
+                  border
+                  border-orange-500/20
+                  bg-white/[0.03]
+                  p-6
+                "
+              >
+
+                <div className="flex justify-between">
+
+                  <h2 className="text-xl font-bold">
+                    {project.title}
+                  </h2>
+
+                  <span className="px-3 py-1 rounded-full bg-orange-500/20 text-orange-400 text-xs">
+                    FIELD
+                  </span>
+
+                </div>
+
+                <p className="text-slate-400 mt-4 line-clamp-2">
+                  {project.description}
+                </p>
+
+                <p className="text-slate-500 mt-5">
+                  {project.requiredSkills}
+                </p>
+
+                <div className="flex justify-between items-center mt-6">
+
+                  <h3 className="text-green-400 text-xl font-bold">
+                    ₹{project.budget.toLocaleString()}
+                  </h3>
+
+                  <button
+                    onClick={() => handleApply(project.id)}
+                    className="px-5 py-2 rounded-xl bg-orange-600 hover:bg-orange-500"
+                  >
+                    Accept Task
+                  </button>
+
+                </div>
+
+              </div>
+
+            ))
+
+          )}
+
+        </div>
+
+      </div>
+
+    </>
+
+  )} 
 
         {showSuccess && (
           <div
@@ -347,77 +356,64 @@ const handleApply = async (projectId: string) => {
           </div>
         )}
 
-        {/* AI Recommendations */}
+       {/* AI Insights */}
 
 <div
   className="
     rounded-3xl
     border
-    border-white/[0.08]
-    bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)]
+    border-white/10
+    bg-white/[0.03]
+    backdrop-blur-xl
     p-8
   "
 >
-  <h2 className="text-2xl font-bold text-white mb-6">
-    🤖 AI Recommended For You
+  <h2 className="text-2xl font-bold text-white mb-8">
+    🤖 AI Career Insights
   </h2>
 
   <div className="grid md:grid-cols-4 gap-6">
 
-    <div className="rounded-2xl bg-slate-950 border border-white/[0.08] p-5">
+    <div className="rounded-2xl bg-slate-950 border border-white/10 p-5">
       <p className="text-slate-400 text-sm">
-        Top Skill Match
+        Total Opportunities
       </p>
 
-      <h3 className="text-xl font-bold text-blue-400 mt-2">
-        AI Dashboard
+      <h3 className="text-3xl font-bold text-cyan-400 mt-2">
+        {projects.length}
       </h3>
-
-      <p className="text-slate-500 mt-2">
-        96% Match
-      </p>
     </div>
 
-    <div className="rounded-2xl bg-slate-950 border border-white/[0.08] p-5">
+    <div className="rounded-2xl bg-slate-950 border border-white/10 p-5">
       <p className="text-slate-400 text-sm">
-        Highest Paying
+        Digital Jobs
+      </p>
+
+      <h3 className="text-3xl font-bold text-blue-400 mt-2">
+        {digitalProjects.length}
+      </h3>
+    </div>
+
+    <div className="rounded-2xl bg-slate-950 border border-white/10 p-5">
+      <p className="text-slate-400 text-sm">
+        Field Jobs
+      </p>
+
+      <h3 className="text-3xl font-bold text-orange-400 mt-2">
+        {fieldProjects.length}
+      </h3>
+    </div>
+
+    <div className="rounded-2xl bg-slate-950 border border-white/10 p-5">
+      <p className="text-slate-400 text-sm">
+        AI Recommendation
       </p>
 
       <h3 className="text-xl font-bold text-green-400 mt-2">
-        ₹25,000
+        {digitalProjects.length >= fieldProjects.length
+          ? "Digital Career"
+          : "Field Career"}
       </h3>
-
-      <p className="text-slate-500 mt-2">
-        AI Dashboard Development
-      </p>
-    </div>
-
-    <div className="rounded-2xl bg-slate-950 border border-white/[0.08] p-5">
-      <p className="text-slate-400 text-sm">
-        Nearest Field Task
-      </p>
-
-      <h3 className="text-xl font-bold text-purple-400 mt-2">
-        8 KM
-      </h3>
-
-      <p className="text-slate-500 mt-2">
-        Document Collection
-      </p>
-    </div>
-
-    <div className="rounded-2xl bg-slate-950 border border-white/[0.08] p-5">
-      <p className="text-slate-400 text-sm">
-        Monthly Potential
-      </p>
-
-      <h3 className="text-xl font-bold text-yellow-400 mt-2">
-        ₹55,000+
-      </h3>
-
-      <p className="text-slate-500 mt-2">
-        Based on AI Forecast
-      </p>
     </div>
 
   </div>

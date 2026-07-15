@@ -3,6 +3,9 @@ export interface Project {
   title: string;
   description: string;
   budget: number;
+  requiredSkills: string;
+
+  taskType: "DIGITAL" | "FIELD";
+
   status: string;
-  deadline: string;
 }

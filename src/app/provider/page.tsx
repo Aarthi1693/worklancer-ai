@@ -77,22 +77,6 @@ useEffect(() => {
       Create Task
     </button>
 
-    <button
-      onClick={() =>
-        router.push("/provider/analytics")
-      }
-      className="
-      px-5
-      py-3
-      rounded-xl
-      border
-      border-white/[0.08]
-      hover:bg-white/5
-      transition
-      "
-    >
-      Analytics
-    </button>
 
     <button
       onClick={() =>

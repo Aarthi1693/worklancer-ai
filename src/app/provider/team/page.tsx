@@ -1,54 +1,84 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import teamAIService from "@/services/team-ai.service";
 import DesktopLayout from "@/components/layout/desktop-layout";
 
-type TeamMember = {
-  id: number;
+interface TeamMember {
   name: string;
   role: string;
-  skillMatch: number;
-  availability: string;
-  rate: string;
-  aiScore: number;
-};
+  match: number;
+  reason: string;
+}
 
-const teamMembers: TeamMember[] = [
-  {
-    id: 1,
-    name: "Rahul Sharma",
-    role: "UI/UX Designer",
-    skillMatch: 98,
-    availability: "Available",
-    rate: "₹500/hr",
-    aiScore: 96,
-  },
-  {
-    id: 2,
-    name: "Priya Verma",
-    role: "Frontend Developer",
-    skillMatch: 95,
-    availability: "Available",
-    rate: "₹700/hr",
-    aiScore: 94,
-  },
-  {
-    id: 3,
-    name: "Arjun Patel",
-    role: "AI Engineer",
-    skillMatch: 91,
-    availability: "Part-Time",
-    rate: "₹1000/hr",
-    aiScore: 92,
-  },
-];
+interface TeamResponse {
+  summary: {
+    successRate: number;
+    estimatedDays: number;
+    recommendedMembers: number;
+    estimatedCost: number;
+  };
+
+  members: TeamMember[];
+
+  riskAnalysis: string[];
+}
+
 
 export default function TeamPage() {
   const [selectedMember, setSelectedMember] =
-    useState<TeamMember | null>(null);
+  useState<TeamMember | null>(null);
 
-  const [showSuccess, setShowSuccess] =
-    useState(false);
+const [showSuccess, setShowSuccess] =
+  useState(false);
+
+const [loading, setLoading] =
+  useState(true);
+
+const [ai, setAI] =
+  useState<TeamResponse | null>(null);
+
+  useEffect(() => {
+  loadRecommendation();
+}, []);
+
+async function loadRecommendation() {
+  try {
+
+    const data =
+      await teamAIService.recommend(
+        "WorkLancer AI Dashboard",
+        "Build a React + Next.js dashboard with AI-powered task management and analytics."
+      );
+
+    setAI(data);
+
+  } catch (err) {
+    console.log(err);
+  } finally {
+    setLoading(false);
+  }
+}
+
+if (loading) {
+  return (
+    <DesktopLayout>
+      <div className="flex justify-center items-center h-[70vh] text-white text-xl">
+        🤖 AI is building the best team...
+      </div>
+    </DesktopLayout>
+  );
+}
+
+if (!ai) {
+  return (
+    <DesktopLayout>
+      <div className="flex justify-center items-center h-[70vh] text-red-400">
+        Failed to generate recommendations.
+      </div>
+    </DesktopLayout>
+  );
+}
 
   return (
     <DesktopLayout>
@@ -81,10 +111,10 @@ export default function TeamPage() {
           </h2>
 
           <div className="space-y-2 text-slate-300">
-            <p>🎯 Team Success Prediction: 94%</p>
-            <p>⚡ Estimated Completion Time: 21 Days</p>
-            <p>🤖 Recommended Team Size: 3 Members</p>
-            <p>💰 Estimated Cost: ₹85,000</p>
+            <p>🎯 Team Success Prediction: {ai.summary.successRate}%</p>
+            <p>⚡ Estimated Completion Time: {ai.summary.estimatedDays} Days</p>
+            <p>🤖 Recommended Team Size: {ai.summary.recommendedMembers} Members</p>
+            <p>💰 Estimated Cost: ₹{ai.summary.estimatedCost.toLocaleString()}</p>
           </div>
 
           <div className="grid grid-cols-4 gap-4 mt-6">
@@ -95,7 +125,7 @@ export default function TeamPage() {
               </p>
 
               <h3 className="text-2xl font-bold mt-1">
-                3
+                {ai.summary.recommendedMembers}
               </h3>
             </div>
 
@@ -105,7 +135,7 @@ export default function TeamPage() {
               </p>
 
               <h3 className="text-2xl font-bold mt-1 text-blue-400">
-                94%
+                {ai.summary.successRate}%
               </h3>
             </div>
 
@@ -135,10 +165,10 @@ export default function TeamPage() {
         {/* Team Members */}
         <div className="space-y-4">
 
-          {teamMembers.map((member) => (
+          {ai.members.map((member, index) => (
 
             <div
-              key={member.id}
+              key={index}
               className="
                 rounded-2xl
                 border
@@ -159,10 +189,13 @@ export default function TeamPage() {
                   <p className="text-slate-400 text-sm">
                     {member.role}
                   </p>
+                  <p className="text-sm text-slate-500 mt-3 leading-6">
+  🤖 {member.reason}
+</p>
                 </div>
 
                 <div className="text-green-400 font-semibold">
-                  {member.skillMatch}% Match
+                  {member.match}% Match
                 </div>
 
               </div>
@@ -171,31 +204,11 @@ export default function TeamPage() {
 
                 <div>
                   <p className="text-xs text-slate-500">
-                    Availability
-                  </p>
-
-                  <p className="mt-1">
-                    {member.availability}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs text-slate-500">
-                    Hourly Rate
-                  </p>
-
-                  <p className="mt-1">
-                    {member.rate}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs text-slate-500">
                     AI Score
                   </p>
 
                   <p className="mt-1 text-blue-400">
-                    {member.aiScore}%
+                    {member.match}%
                   </p>
                 </div>
 
@@ -212,7 +225,7 @@ export default function TeamPage() {
                   <div
                     className="h-2 rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 transition-all duration-1000"
                     style={{
-                      width: `${member.skillMatch}%`,
+                      width: `${member.match}%`
                     }}
                   />
                 </div>
@@ -387,6 +400,38 @@ export default function TeamPage() {
             </div>
           </div>
         )}
+
+        <div
+  className="
+    rounded-3xl
+    border
+    border-red-500/20
+    bg-white/[0.03]
+    backdrop-blur-xl
+    p-6
+  "
+>
+  <h2 className="text-2xl font-bold mb-5">
+    🧠 AI Risk Analysis
+  </h2>
+
+  <div className="space-y-3">
+    {ai.riskAnalysis.map((risk, index) => (
+      <div
+        key={index}
+        className="flex gap-3 items-start"
+      >
+        <span className="text-red-400 mt-1">
+          ⚠
+        </span>
+
+        <p className="text-slate-300">
+          {risk}
+        </p>
+      </div>
+    ))}
+  </div>
+</div>
 
       </div>
     </DesktopLayout>

@@ -1,5 +1,12 @@
 import api from "@/lib/api";
 
+interface SubmitWorkDto {
+  applicationId: string;
+  githubLink: string;
+  deploymentLink?: string;
+  description: string;
+}
+
 class MasterService {
   async getDashboard() {
     const response = await api.get("/master/dashboard");
@@ -18,6 +25,12 @@ class MasterService {
 
   async getMyTasks() {
   const response = await api.get("/master/my-tasks");
+  return response.data;
+}
+
+ async submitWork(data: SubmitWorkDto)
+  {
+  const response = await api.post("/submission", data);
   return response.data;
 }
 }
