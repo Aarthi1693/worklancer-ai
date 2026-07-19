@@ -21,18 +21,17 @@ export default function DesktopLayout({
         <Sidebar />
 
         <main
-          className="
-            flex-1
-            overflow-y-auto
-            p-6
-            min-h-screen
-            bg-gradient-to-br
-            from-slate-950
-            via-[#050B1F]
-            to-[#0A1028]
-            text-white
-          "
-        >
+  className="
+    flex-1
+    overflow-y-auto
+    p-6
+    bg-gradient-to-br
+    from-slate-950
+    via-[#050B1F]
+    to-[#0A1028]
+    text-white
+  "
+>
           {children}
         </main>
 

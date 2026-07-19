@@ -19,3 +19,16 @@ export interface LoginResponse {
     role: string;
   };
 }
+
+export interface ForgotPasswordDto {
+  email: string;
+}
+
+export interface ResetPasswordDto {
+  email: string;
+  newPassword: string;
+}
+
+export interface MessageResponse {
+  message: string;
+}

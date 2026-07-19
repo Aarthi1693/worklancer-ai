@@ -4,6 +4,9 @@ import {
   LoginDto,
   RegisterDto,
   LoginResponse,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+  MessageResponse,
 } from "@/types/auth";
 
 class AuthService {
@@ -25,9 +28,27 @@ class AuthService {
     return response.data;
   }
 
-  async register(data: RegisterDto) {
+  async   register(data: RegisterDto) {
     const response = await api.post(
       "/auth/register",
+      data
+    );
+
+    return response.data;
+  }
+
+  async forgotPassword(data: ForgotPasswordDto): Promise<MessageResponse> {
+    const response = await api.post<MessageResponse>(
+      "/auth/forgot-password",
+      data
+    );
+
+    return response.data;
+  }
+
+  async resetPassword(data: ResetPasswordDto): Promise<MessageResponse> {
+    const response = await api.post<MessageResponse>(
+      "/auth/reset-password",
       data
     );
 

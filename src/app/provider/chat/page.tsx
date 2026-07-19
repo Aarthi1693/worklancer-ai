@@ -1,283 +1,182 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Cookies from "js-cookie";
+
 import DesktopLayout from "@/components/layout/desktop-layout";
 
-const contacts = [
-  {
-    id: 1,
-    name: "Rahul Sharma",
-    role: "Frontend Developer",
-    online: true,
-  },
-  {
-    id: 2,
-    name: "Priya Verma",
-    role: "UI/UX Designer",
-    online: true,
-  },
-  {
-    id: 3,
-    name: "Arjun Patel",
-    role: "AI Engineer",
-    online: false,
-  },
-];
+import ChatSidebar from "@/components/chat/ChatSidebar";
+import ChatHeader from "@/components/chat/ChatHeader";
+import MessageList from "@/components/chat/MessageList";
+import ChatInput from "@/components/chat/ChatInput";
+import SuggestedReplies from "@/components/chat/SuggestedReplies";
+import EmptyChat from "@/components/chat/EmptyChat";
+
+import chatService from "@/services/chat.service";
+import { setChatUnreadTotal } from "@/lib/chatUnread";
 
 export default function ProviderChatPage() {
-  const [selectedUser, setSelectedUser] =
-    useState(contacts[0]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
-  const [message, setMessage] =
-    useState("");
+  const [conversations, setConversations] = useState<any[]>([]);
 
-  const [messages, setMessages] = useState([
-    {
-      sender: "Rahul Sharma",
-      text: "Hello! I have completed the first module.",
-    },
-    {
-      sender: "Provider",
-      text: "Great work. Please proceed with the next phase.",
-    },
-  ]);
+  const [selectedConversation, setSelectedConversation] =
+    useState<any>(null);
 
-  const sendMessage = () => {
-    if (!message.trim()) return;
+  const [messages, setMessages] = useState<any[]>([]);
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        sender: "Provider",
-        text: message,
-      },
-    ]);
+  const [message, setMessage] = useState("");
 
-    setMessage("");
+  const [conversationsLoading, setConversationsLoading] = useState(true);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    loadConversations();
+  }, []);
+
+  async function loadConversations() {
+    try {
+      setConversationsLoading(true);
+      const user = JSON.parse(
+        Cookies.get("user") || "{}"
+      );
+
+      setCurrentUser(user);
+
+      const data =
+        await chatService.getConversations(user.id);
+
+      setConversations(data);
+
+      setChatUnreadTotal(
+        data.reduce(
+          (sum: number, c: any) =>
+            sum + (c.unreadCount ?? 0),
+          0
+        )
+      );
+
+      if (data.length > 0) {
+        setSelectedConversation(data[0]);
+
+        await loadMessages(data[0].id);
+      }
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setConversationsLoading(false);
+    }
+  }
+
+  async function loadMessages(
+    conversationId: string
+  ) {
+    try {
+      setMessagesLoading(true);
+      const data =
+        await chatService.getMessages(
+          conversationId
+        );
+
+      setMessages(data);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setMessagesLoading(false);
+    }
+  }
+
+  const sendMessage = async () => {
+    if (!message.trim() || !selectedConversation) return;
+
+    try {
+      setSending(true);
+      const user = JSON.parse(Cookies.get("user") || "{}");
+
+      await chatService.sendMessage({
+        conversationId: selectedConversation.id,
+        senderId: user.id,
+        message,
+      });
+
+      setMessage("");
+
+      await loadMessages(selectedConversation.id);
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
     <DesktopLayout>
-      <div className="h-[85vh] flex gap-6">
+      <div className="
+        flex
+        h-full
+        gap-6
+        overflow-hidden
+      ">
+        <ChatSidebar
+          conversations={conversations}
+          selectedConversation={selectedConversation}
+          currentUserId={currentUser?.id || ""}
+          onSelect={(conversation) => {
+            setSelectedConversation(conversation);
 
-        {/* Contact List */}
-
-        <div
-          className="
-            w-[320px]
-            rounded-3xl
-            border
-            border-white/[0.08]
-            bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)]
-            p-5
-          "
-        >
-          <h2 className="text-2xl font-bold mb-6">
-            Chats
-          </h2>
-
-          <div className="space-y-3">
-            {contacts.map((contact) => (
-              <div
-                key={contact.id}
-                onClick={() =>
-                  setSelectedUser(contact)
-                }
-                className="
-                  p-4
-                  rounded-2xl
-                  cursor-pointer
-                  hover:bg-slate-800
-                  transition
-                "
-              >
-                <div className="flex items-center justify-between">
-
-                  <div>
-                    <h3 className="font-semibold">
-                      {contact.name}
-                    </h3>
-
-                    <p className="text-sm text-slate-400">
-                      {contact.role}
-                    </p>
-                  </div>
-
-                  <div
-                    className={`w-3 h-3 rounded-full ${
-                      contact.online
-                        ? "bg-green-500"
-                        : "bg-gray-500"
-                    }`}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Chat Window */}
+            loadMessages(conversation.id);
+          }}
+          loading={conversationsLoading}
+        />
 
         <div
-          className="
-            flex-1
-            rounded-3xl
-            border
-            border-white/[0.08]
-            bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)]
-            flex
-            flex-col
-          "
-        >
-
-          {/* Header */}
-
-          <div
-            className="
-              p-6
-              border-b
-              border-white/[0.08]
-            "
-          >
-            <h2 className="text-2xl font-bold">
-              {selectedUser.name}
-            </h2>
-
-            <p className="text-slate-400">
-              {selectedUser.role}
-            </p>
-          </div>
-
-          {/* Messages */}
-
-          <div className="flex-1 p-6 overflow-y-auto space-y-4">
-
-            {messages.map((msg, index) => (
-              <div
-                key={index}
-                className={`flex ${
-                  msg.sender === "Provider"
-                    ? "justify-end"
-                    : "justify-start"
-                }`}
-              >
-                <div
-                  className={`max-w-md px-5 py-3 rounded-2xl ${
-                    msg.sender === "Provider"
-                       ? "bg-gradient-to-r from-blue-600 to-purple-600 shadow-[0_0_20px_rgba(124,58,237,0.4)]"
-                      : "bg-slate-800"
-                  }`}
-                >
-                  {msg.text}
-                </div>
-              </div>
-            ))}
-
-          </div>
-
-          {/* AI Suggested Replies */}
-
-          <div className="px-6 pb-3">
-
-            <p className="text-sm text-slate-400 mb-3">
-              AI Suggested Replies
-            </p>
-
-            <div className="flex gap-2 flex-wrap">
-
-              <button
-                onClick={() =>
-                  setMessage(
-                    "Great work, keep going."
-                  )
+  className="
+    flex-1
+    flex
+    flex-col
+    overflow-hidden
+    rounded-3xl
+    border
+    border-white/10
+    bg-white/[0.03]
+    backdrop-blur-xl
+  "
+>
+          {selectedConversation ? (
+            <>
+              <ChatHeader
+                conversation={selectedConversation}
+                currentUserId={
+                  currentUser?.id || ""
                 }
-                className="
-                  px-3
-                  py-2
-                  rounded-xl
-                  bg-slate-800
-                "
-              >
-                Great Work
-              </button>
+              />
 
-              <button
-                onClick={() =>
-                  setMessage(
-                    "Please update the progress."
-                  )
+              <MessageList
+                messages={messages}
+                currentUserId={
+                  currentUser?.id || ""
                 }
-                className="
-                  px-3
-                  py-2
-                  rounded-xl
-                  bg-slate-800
-                "
-              >
-                Update Progress
-              </button>
+                loading={messagesLoading}
+              />
 
-              <button
-                onClick={() =>
-                  setMessage(
-                    "Let's schedule a review."
-                  )
-                }
-                className="
-                  px-3
-                  py-2
-                  rounded-xl
-                  bg-slate-800
-                "
-              >
-                Schedule Review
-              </button>
+              <SuggestedReplies
+                onSelect={(reply) => {
+                  setMessage(reply);
+                  sendMessage();
+                }}
+              />
 
-            </div>
-
-          </div>
-
-          {/* Input */}
-
-          <div
-            className="
-              p-6
-              border-t
-              border-white/[0.08]
-              flex
-              gap-3
-            "
-          >
-            <input
-              value={message}
-              onChange={(e) =>
-                setMessage(e.target.value)
-              }
-              placeholder="Type a message..."
-              className="
-                flex-1
-                p-3
-                rounded-xl
-                bg-slate-800
-                border
-                border-white/[0.08]
-              "
-            />
-
-            <button
-              onClick={sendMessage}
-              className="
-                px-6
-                py-3
-                rounded-xl
-                bg-gradient-to-r from-blue-600 to-purple-600 shadow-[0_0_20px_rgba(124,58,237,0.4)]
-                hover:from-blue-500 hover:to-purple-500
-              "
-            >
-              Send
-            </button>
-          </div>
-
+              <ChatInput
+                onSend={sendMessage}
+                value={message}
+                onChange={setMessage}
+                loading={sending}
+              />
+            </>
+          ) : (
+            <EmptyChat />
+          )}
         </div>
 
       </div>

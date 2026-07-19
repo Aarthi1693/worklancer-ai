@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 import {
   LayoutDashboard,
   Briefcase,
@@ -16,6 +17,9 @@ import {
   Bell,
   Upload,
 } from "lucide-react";
+
+import UnreadBadge from "@/components/chat/UnreadBadge";
+import { useChatUnreadTotal } from "@/lib/chatUnread";
 
 
 const providerMenu = [
@@ -145,8 +149,12 @@ const masterMenu = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const chatUnreadCount = useChatUnreadTotal();
 
   const handleLogout = () => {
+    Cookies.remove("access_token");
+    Cookies.remove("user");
+
     localStorage.clear();
     sessionStorage.clear();
 
@@ -163,7 +171,7 @@ export default function Sidebar() {
     <aside
       className="
         w-64
-        h-[calc(100vh-64px)]
+        h-full
         bg-black/40
         backdrop-blur-xl
         border-r
@@ -270,6 +278,10 @@ export default function Sidebar() {
               <span className="font-medium">
                 {item.title}
               </span>
+
+              {item.title === "Chat" && (
+                <UnreadBadge count={chatUnreadCount} />
+              )}
             </Link>
           );
         })}

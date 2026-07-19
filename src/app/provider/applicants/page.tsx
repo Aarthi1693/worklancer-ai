@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import DesktopLayout from "@/components/layout/desktop-layout";
 import providerService from "@/services/provider.service";
+import { useRouter } from "next/navigation";
+import chatService from "@/services/chat.service";
+import authService from "@/services/auth.service";
+
 
 interface Applicant {
   id: string;
@@ -27,11 +31,13 @@ interface Applicant {
 }
 
 export default function ApplicantsPage() {
+  const router = useRouter();
+
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedProject, setSelectedProject] = useState("");
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [loading, setLoading] = useState(true);
-
+  
   useEffect(() => {
     loadProjects();
   }, []);
@@ -77,6 +83,47 @@ export default function ApplicantsPage() {
 
     loadApplicants(selectedProject);
   };
+
+  const startChat = async (applicant: Applicant) => {
+  try {
+    const user = authService.getUser();
+
+    if (!user?.id) {
+      console.error(
+        "startChat: cannot start conversation, logged-in provider id is missing"
+      );
+      return;
+    }
+
+    const projectId = applicant.project.id;
+    const providerId = user.id;
+    const masterId = applicant.user.id;
+
+    console.log("createConversation payload:", {
+      projectId,
+      providerId,
+      masterId,
+    });
+
+    if (!projectId || !providerId || !masterId) {
+      console.error(
+        "startChat: refusing to call API with undefined required field",
+        { projectId, providerId, masterId }
+      );
+      return;
+    }
+
+    await chatService.createConversation({
+      projectId,
+      providerId,
+      masterId,
+    });
+
+    router.push("/provider/chat");
+  } catch (error) {
+    console.log(error);
+  }
+};
 
   return (
     <DesktopLayout>
@@ -247,37 +294,55 @@ export default function ApplicantsPage() {
 
       <div className="flex gap-4 mt-8">
 
-        <button
-          onClick={() => accept(applicant.id)}
-          disabled={applicant.status === "ACCEPTED"}
-          className="
-            flex-1
-            py-3
-            rounded-xl
-            bg-green-600
-            hover:bg-green-500
-            disabled:opacity-50
-          "
-        >
-          ✅ Accept
-        </button>
+  {applicant.status === "PENDING" && (
+    <>
+      <button
+        onClick={() => accept(applicant.id)}
+        className="
+          flex-1
+          py-3
+          rounded-xl
+          bg-green-600
+          hover:bg-green-500
+        "
+      >
+        ✅ Accept
+      </button>
 
-        <button
-          onClick={() => reject(applicant.id)}
-          disabled={applicant.status === "REJECTED"}
-          className="
-            flex-1
-            py-3
-            rounded-xl
-            bg-red-600
-            hover:bg-red-500
-            disabled:opacity-50
-          "
-        >
-          ❌ Reject
-        </button>
+      <button
+        onClick={() => reject(applicant.id)}
+        className="
+          flex-1
+          py-3
+          rounded-xl
+          bg-red-600
+          hover:bg-red-500
+        "
+      >
+        ❌ Reject
+      </button>
+    </>
+  )}
 
-      </div>
+  {applicant.status === "ACCEPTED" && (
+    <button
+      onClick={() => startChat(applicant)}
+      className="
+        flex-1
+        py-3
+        rounded-xl
+        bg-gradient-to-r
+        from-blue-600
+        to-purple-600
+        hover:from-blue-500
+        hover:to-purple-500
+      "
+    >
+      💬 Open Chat
+    </button>
+  )}
+
+</div>
 
     </div>
 

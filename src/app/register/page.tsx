@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Image from "next/image";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -38,38 +39,34 @@ export default function RegisterPage() {
           p-8
         "
       >
-        {/* Logo */}
-        <div className="text-center mb-8">
+        <div className="mb-10 flex flex-col items-center">
 
-          <div
-            className="
-              h-16
-              w-16
-              mx-auto
-              rounded-2xl
-              bg-gradient-to-r
-              from-blue-500
-              to-purple-600
-              flex
-              items-center
-              justify-center
-              text-white
-              font-bold
-              text-2xl
-            "
-          >
-            W
-          </div>
+  <div className="relative">
 
-          <h1 className="text-3xl font-bold mt-4 text-white">
-            Create Account
-          </h1>
+    <div className="absolute inset-0 rounded-3xl bg-blue-500/20 blur-2xl" />
 
-          <p className="text-slate-400 mt-2">
-            Join the WorkLancer AI ecosystem
-          </p>
+    <Image
+      src="/logo/logo.png"
+      alt="WorkLancer AI"
+      width={84}
+      height={84}
+      className="relative rounded-2xl bg-white p-2 shadow-2xl"
+    />
 
-        </div>
+  </div>
+
+  <h1 className="mt-6 text-4xl font-black tracking-tight text-white">
+    Create Your{" "}
+    <span className="bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent">
+      Account
+    </span>
+  </h1>
+
+  <p className="mt-2 text-slate-400">
+    Join WorkLancer AI and start collaborating smarter.
+  </p>
+
+</div>
 
         {/* Full Name */}
         <div className="mb-4">

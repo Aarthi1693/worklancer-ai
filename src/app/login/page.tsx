@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Image from "next/image";
 import authService from "@/services/auth.service";
 
 export default function LoginPage() {
@@ -67,37 +68,34 @@ export default function LoginPage() {
           p-8
         "
       >
-        {/* Logo */}
-        <div className="text-center mb-8">
+        <div className="mb-10 flex flex-col items-center">
 
-          <div
-            className="
-              h-16
-              w-16
-              mx-auto
-              rounded-2xl
-              bg-gradient-to-r
-              from-blue-500
-              to-purple-600
-              flex
-              items-center
-              justify-center
-              text-white
-              font-bold
-              text-2xl
-            "
-          >
-            W
-          </div>
+  <div className="relative">
 
-          <h1 className="text-3xl font-bold mt-4 text-white">
-            WorkLancer AI
-          </h1>
+    <div className="absolute inset-0 rounded-3xl bg-blue-500/20 blur-2xl" />
 
-          <p className="text-slate-400 mt-2">
-            Intelligent Work Collaboration Platform
-          </p>
-        </div>
+    <Image
+      src="/logo/logo.png"
+      alt="WorkLancer AI"
+      width={84}
+      height={84}
+      className="relative rounded-2xl bg-white p-2 shadow-2xl"
+    />
+
+  </div>
+
+  <h1 className="mt-6 text-4xl font-black tracking-tight text-white">
+    WorkLancer{" "}
+    <span className="bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent">
+      AI
+    </span>
+  </h1>
+
+  <p className="mt-2 text-slate-400">
+    Welcome back. Sign in to continue.
+  </p>
+
+</div>
 
         {/* Email */}
         <div className="mb-4">
@@ -145,6 +143,15 @@ export default function LoginPage() {
     outline-none
   "
 />
+          <div className="mt-2 flex justify-end">
+            <button
+              type="button"
+              onClick={() => router.push("/forgot-password")}
+              className="text-sm text-blue-400 hover:text-blue-300"
+            >
+              Forgot Password?
+            </button>
+          </div>
         </div>
 
         {/* Role */}

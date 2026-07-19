@@ -1,44 +1,43 @@
 "use client";
-import { useState } from "react";
-
+import { useEffect, useState } from "react";
 import {
   Bell,
   Search,
   ChevronRight,
-} from "lucide-react";import { usePathname } from "next/navigation";
+} from "lucide-react";
 
+import { usePathname } from "next/navigation";
+
+import Cookies from "js-cookie";
+import { NotificationService } from "@/services/notification.service";
 
 export default function Header() {
   const [showNotifications, setShowNotifications] =
   useState(false);
-  const notifications = [
-  {
-    icon: "🤖",
-    title: "AI Recommendation Available",
-    time: "2 min ago",
-  },
-  {
-    icon: "💰",
-    title: "Payment Received",
-    time: "15 min ago",
-  },
-  {
-    icon: "📋",
-    title: "New Task Assigned",
-    time: "1 hour ago",
-  },
-  {
-    icon: "📈",
-    title: "Profile Score Improved",
-    time: "Today",
-  },
-  {
-    icon: "⏰",
-    title: "Project Deadline Reminder",
-    time: "Tomorrow",
-  },
-];
+  const [notifications, setNotifications] = useState<any[]>([]);
   const pathname = usePathname();
+
+  useEffect(() => {
+  const loadNotifications = async () => {
+    try {
+      const user = Cookies.get("user");
+
+      if (!user) return;
+
+      const currentUser = JSON.parse(user);
+
+      const data = await NotificationService.getNotifications(
+        currentUser.id
+      );
+
+      setNotifications(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  loadNotifications();
+}, []);
 
   const isMaster = pathname.startsWith("/master");
 
@@ -134,17 +133,27 @@ export default function Header() {
             className="text-slate-300"
           />
 
-          <span
-            className="
-              absolute
-              top-1
-              right-1
-              h-2
-              w-2
-              rounded-full
-              bg-red-500
-            "
-          />
+          {notifications.filter((n) => !n.isRead).length > 0 && (
+  <span
+    className="
+      absolute
+      -top-1
+      -right-1
+      h-5
+      w-5
+      rounded-full
+      bg-red-500
+      text-[10px]
+      flex
+      items-center
+      justify-center
+      text-white
+      font-bold
+    "
+  >
+    {notifications.filter((n) => !n.isRead).length}
+  </span>
+)}
         </button>
 
         {showNotifications && (
@@ -169,43 +178,53 @@ export default function Header() {
   </h2>
 
   <span className="text-xs text-blue-400">
-    5 New
-  </span>
+  {notifications.filter((n) => !n.isRead).length} New
+</span>
 </div>
 
-    {notifications.map((item, index) => (
-      <div
-        key={index}
-        className="
-          p-4
-          border-b
-          border-white/5
-          hover:bg-white/5
-        "
-      >
-        <div className="flex gap-3 items-start">
-  <span className="text-xl">
-    {item.icon}
-  </span>
+{notifications.map((item) => (     
+   <div
+  key={item.id}
+  className="
+    p-4
+    border-b
+    border-white/5
+    hover:bg-white/5
+    cursor-pointer
+  "
+>
+  <div className="flex gap-3">
 
-  <div>
-    <p className="text-white">
-      {item.title}
-    </p>
+    <span className="text-xl">
+      {item.type === "CHAT"
+        ? "💬"
+        : item.type === "APPLICATION"
+        ? "📋"
+        : item.type === "PAYMENT"
+        ? "💰"
+        : "🔔"}
+    </span>
 
-    <p className="text-xs text-slate-500 mt-1">
-      {item.time}
-    </p>
+    <div>
+      <p className="text-white font-medium">
+        {item.title}
+      </p>
+
+      <p className="text-sm text-slate-400">
+        {item.message}
+      </p>
+
+      <p className="text-xs text-slate-500 mt-1">
+        {new Date(item.createdAt).toLocaleString()}
+      </p>
+    </div>
+
   </div>
 </div>
-
-        <p className="text-xs text-slate-500 mt-1">
-          {item.time}
-        </p>
-      </div>
-    ))}
-  </div>
+))}
+</div>
 )}
+
         <div
           className="
             flex
