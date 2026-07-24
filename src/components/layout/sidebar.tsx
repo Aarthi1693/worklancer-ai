@@ -10,16 +10,40 @@ import {
   BarChart3,
   CreditCard,
   BrainCircuit,
-  Settings,
+  CircleUser,
   ClipboardList,
   PlusCircle,
   MessageSquare,
   Bell,
   Upload,
+  FolderOpen,
+  ClipboardCheck,
+  ShieldCheck,
 } from "lucide-react";
 
 import UnreadBadge from "@/components/chat/UnreadBadge";
 import { useChatUnreadTotal } from "@/lib/chatUnread";
+import { useEffect, useState } from "react";
+import providerService from "@/services/provider.service";
+
+
+function getBusinessHealth(projects: { status?: string }[]) {
+  if (!projects || projects.length === 0) {
+    return { label: "Awaiting project activity.", color: "text-slate-400" };
+  }
+
+  const completed = projects.filter((p) => p.status === "COMPLETED").length;
+  const inProgress = projects.filter((p) => p.status === "IN_PROGRESS").length;
+  const review = projects.filter((p) => p.status === "REVIEW").length;
+  const completionRate = completed / projects.length;
+
+  if (completionRate >= 0.7)
+    return { label: "Excellent", color: "text-emerald-400" };
+  if (completionRate >= 0.4) return { label: "Good", color: "text-blue-400" };
+  if (inProgress > 0 || review > 0)
+    return { label: "Healthy", color: "text-green-400" };
+  return { label: "Needs Attention", color: "text-yellow-400" };
+}
 
 
 const providerMenu = [
@@ -40,11 +64,6 @@ const providerMenu = [
     href: "/provider/tasks",
   },
   {
-    title: "Team",
-    icon: Users,
-    href: "/provider/team",
-  },
-  {
     title: "Payments",
     icon: CreditCard,
     href: "/provider/payments",
@@ -53,6 +72,11 @@ const providerMenu = [
     title: "AI Planning",
     icon: BrainCircuit,
     href: "/provider/ai-planning",
+  },
+  {
+    title: "Saved Plans",
+    icon: FolderOpen,
+    href: "/provider/saved-plans",
   },
   {
     title: "Task Management",
@@ -67,14 +91,14 @@ const providerMenu = [
 
   {
   title: "Submitted Work",
-  icon: Upload,
+  icon: ClipboardCheck,
   href: "/provider/submissions",
   },
 
   {
-    title: "Settings",
-    icon: Settings,
-    href: "/provider/settings",
+    title: "Profile",
+    icon: CircleUser,
+    href: "/provider/profile",
   },
   {
     title: "Notifications",
@@ -95,10 +119,15 @@ const masterMenu = [
     href: "/master",
   },
   {
-  title: "Available Tasks",
-  icon: Briefcase,
-  href: "/master/available-tasks",
-},
+    title: "AI KYC Verification",
+    icon: ShieldCheck,
+    href: "/master/kyc",
+  },
+  {
+    title: "Available Tasks",
+    icon: Briefcase,
+    href: "/master/available-tasks",
+  },
   {
     title: "My Tasks",
     icon: Briefcase,
@@ -126,13 +155,8 @@ const masterMenu = [
   },
   {
     title: "Profile",
-    icon: Users,
+    icon: CircleUser,
     href: "/master/profile",
-  },
-  {
-    title: "Settings",
-    icon: Settings,
-    href: "/master/settings",
   },
   {
     title: "Notifications",
@@ -150,6 +174,32 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const chatUnreadCount = useChatUnreadTotal();
+  const [health, setHealth] = useState<{ label: string; color: string }>({
+    label: "Awaiting project activity.",
+    color: "text-slate-400",
+  });
+
+  const isMaster = pathname.startsWith("/master");
+
+  useEffect(() => {
+    if (isMaster) return;
+
+    const fetchProviderData = async () => {
+      try {
+        const data = await providerService.getProjects();
+        const projects = Array.isArray(data) ? data : data.projects || [];
+        setHealth(getBusinessHealth(projects));
+      } catch (e) {
+        console.error("Failed to load provider health", e);
+      }
+    };
+
+    fetchProviderData();
+  }, [isMaster]);
+
+  const menuItems = isMaster
+    ? masterMenu
+    : providerMenu;
 
   const handleLogout = () => {
     Cookies.remove("access_token");
@@ -160,12 +210,6 @@ export default function Sidebar() {
 
     router.push("/login");
   };
-
-  const isMaster = pathname.startsWith("/master");
-
-  const menuItems = isMaster
-    ? masterMenu
-    : providerMenu;
 
   return (
     <aside
@@ -307,13 +351,14 @@ export default function Sidebar() {
               </p>
 
               <h3 className="text-2xl font-bold text-blue-400 mt-2">
-                94%
+                N/A
               </h3>
 
               <div className="mt-3 h-2 rounded-full bg-slate-800">
+
                 <div
                   className="h-2 rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 transition-all duration-1000"
-                  style={{ width: "94%" }}
+                  style={{ width: "0%" }}
                 />
               </div>
 
@@ -321,25 +366,44 @@ export default function Sidebar() {
                 Market Competitive
               </p>
             </>
-          ) : (
+            ) : (
             <>
               <p className="text-xs uppercase tracking-wide text-slate-400">
                 AI Business Health
               </p>
 
-              <h3 className="text-2xl font-bold text-green-400 mt-2">
-                95/100
+              <h3 className={`text-2xl font-bold mt-2 ${health.color}`}>
+                {health.label}
               </h3>
 
               <div className="mt-3 h-2 rounded-full bg-slate-800">
                 <div
                   className="h-2 rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 transition-all duration-1000"
-                  style={{ width: "95%" }}
+                  style={{
+                    width:
+                      health.label === "Excellent"
+                        ? "90%"
+                        : health.label === "Good"
+                          ? "70%"
+                          : health.label === "Healthy"
+                            ? "50%"
+                            : health.label === "Needs Attention"
+                              ? "25%"
+                              : "10%",
+                  }}
                 />
               </div>
 
               <p className="text-xs text-slate-500 mt-2">
-                Excellent Performance
+                {health.label === "Awaiting project activity."
+                  ? "Create a project to begin"
+                  : health.label === "Excellent"
+                    ? "Excellent Performance"
+                    : health.label === "Good"
+                      ? "Good Performance"
+                      : health.label === "Healthy"
+                        ? "Growing Well"
+                        : "Needs Attention"}
               </p>
             </>
           )}

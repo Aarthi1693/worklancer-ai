@@ -273,7 +273,7 @@ export default function ApplicantsPage() {
           </p>
 
           <h3 className="text-yellow-400 text-xl font-bold mt-2">
-            ₹{applicant.project.budget.toLocaleString()}
+            ₹{(applicant.project?.budget ?? 0).toLocaleString()}
           </h3>
 
         </div>

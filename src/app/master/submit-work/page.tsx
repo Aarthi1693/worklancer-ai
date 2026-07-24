@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import DesktopLayout from "@/components/layout/desktop-layout";
-import submissionService from "@/services/submission.service";
+import { submissionService } from "@/services/submission.service";
 import masterService from "@/services/master.service";
+import authService from "@/services/auth.service";
 
 interface Task {
   id: string;
@@ -68,10 +69,12 @@ export default function SubmitWorkPage() {
     try {
       setLoading(true);
 
-      const acceptedTasks =
-        await masterService.getMyTasks();
+      const user = authService.getUser();
 
-      const pendingTasks = acceptedTasks.filter(
+      const acceptedTasks =
+        await masterService.getMyTasks(user?.id || "");
+
+      const pendingTasks = (acceptedTasks || []).filter(
         (task: Task) => !task.submission
       );
 
@@ -283,7 +286,7 @@ export default function SubmitWorkPage() {
 
                     <span
                       className={`inline-block mt-2 px-4 py-2 rounded-full text-sm font-semibold ${
-                        currentTask.project.taskType === "DIGITAL"
+                        currentTask?.project?.taskType === "DIGITAL"
                           ? "bg-cyan-500/20 text-cyan-400"
                           : "bg-orange-500/20 text-orange-400"
                       }`}
@@ -300,7 +303,7 @@ export default function SubmitWorkPage() {
                     </p>
 
                     <h3 className="text-3xl font-bold text-green-400">
-                      ₹{currentTask.project.budget}
+                       {currentTask?.project?.budget}
                     </h3>
 
                   </div>
@@ -517,7 +520,7 @@ export default function SubmitWorkPage() {
                         <div>
 
                           <h3 className="text-xl font-bold text-white">
-                            {submission.application.project.title}
+                             {submission.application?.project?.title || "Untitled Project"}
                           </h3>
 
                           <p className="text-slate-500 mt-1">
@@ -546,17 +549,17 @@ export default function SubmitWorkPage() {
 
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            submission.application.project.taskType ===
+                             submission.application?.project?.taskType ===
                             "DIGITAL"
                               ? "bg-cyan-500/20 text-cyan-400"
                               : "bg-orange-500/20 text-orange-400"
                           }`}
                         >
-                          {submission.application.project.taskType}
+                           {submission.application?.project?.taskType}
                         </span>
 
                         <span className="text-green-400 font-bold">
-                          ₹{submission.application.project.budget}
+                           ₹{(submission.application?.project?.budget ?? 0).toLocaleString()}
                         </span>
 
                       </div>

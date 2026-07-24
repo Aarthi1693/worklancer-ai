@@ -33,12 +33,29 @@ class SubmissionService {
   }
 
   async getProviderSubmissions() {
-  const response = await api.get("/submission/provider");
+    const response = await api.get("/submission/provider");
+    return response.data;
+  }
 
-  console.log("Provider submissions:", response.data);
+  async approveSubmission(id: string, feedback?: string) {
+    const response = await api.patch(`/submission/${id}/approve`, { feedback });
+    return response.data;
+  }
 
-  return response.data;
-}
+  async releasePayment(submissionId: string) {
+    const response = await api.post(`/submission/${submissionId}/release-payment`);
+    return response.data;
+  }
+
+  async requestChanges(id: string, feedback: string) {
+    const response = await api.patch(`/submission/${id}/request-changes`, { feedback });
+    return response.data;
+  }
+
+  async rejectSubmission(id: string, feedback: string, reason: string) {
+    const response = await api.patch(`/submission/${id}/reject`, { feedback, reason });
+    return response.data;
+  }
 
   async delete(id: string) {
     const response = await api.delete(`/submission/${id}`);
@@ -46,4 +63,4 @@ class SubmissionService {
   }
 }
 
-export default new SubmissionService();
+export const submissionService = new SubmissionService();

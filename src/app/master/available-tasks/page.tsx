@@ -7,6 +7,8 @@ import DesktopLayout from "@/components/layout/desktop-layout";
 import masterService from "@/services/master.service";
 import applicationService from "@/services/application.service";
 import authService from "@/services/auth.service";
+import kycService from "@/services/kyc.service";
+import { ShieldCheck, XCircle } from "lucide-react";
 
 interface Project {
   id: string;
@@ -24,10 +26,26 @@ export default function AvailableTasksPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [kycVerified, setKycVerified] = useState(false);
+  const [loadingKyc, setLoadingKyc] = useState(true);
+  const [showKycBlock, setShowKycBlock] = useState(false);
 
   useEffect(() => {
     fetchProjects();
+    checkKyc();
   }, []);
+
+  async function checkKyc() {
+    try {
+      const data = await kycService.getStatus();
+      setKycVerified(data.status === "VERIFIED");
+      setShowKycBlock(data.status !== "VERIFIED");
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoadingKyc(false);
+    }
+  }
 
   async function fetchProjects() {
     try {
@@ -36,7 +54,7 @@ export default function AvailableTasksPage() {
       const data = await masterService.getProjects();
 
       setProjects(
-        data.filter(
+        (data || []).filter(
           (project: Project) =>
             project.status === "OPEN"
         )
@@ -66,6 +84,11 @@ export default function AvailableTasksPage() {
 
   async function handleApply(projectId: string) {
     try {
+      if (!kycVerified) {
+        setShowKycBlock(true);
+        return;
+      }
+
       const user = authService.getUser();
 
       if (!user?.id) {
@@ -90,6 +113,11 @@ export default function AvailableTasksPage() {
 
     } catch (error: any) {
       console.error(error);
+
+      if (error?.response?.data?.message?.includes("KYC")) {
+        setShowKycBlock(true);
+        return;
+      }
 
       alert(
         error?.response?.data?.message ??
@@ -211,7 +239,7 @@ return (
                 <div className="flex justify-between items-center mt-6">
 
                   <h3 className="text-green-400 text-xl font-bold">
-                    ₹{project.budget.toLocaleString()}
+                     ₹{(project.budget ?? 0).toLocaleString()}
                   </h3>
 
                   <button
@@ -287,7 +315,7 @@ return (
                 <div className="flex justify-between items-center mt-6">
 
                   <h3 className="text-green-400 text-xl font-bold">
-                    ₹{project.budget.toLocaleString()}
+                     ₹{(project.budget ?? 0).toLocaleString()}
                   </h3>
 
                   <button
@@ -356,68 +384,59 @@ return (
           </div>
         )}
 
-       {/* AI Insights */}
+   {showKycBlock && (
+     <div
+       className="
+         fixed
+         inset-0
+         bg-black/60
+         backdrop-blur-sm
+         flex
+         items-center
+         justify-center
+         z-50
+       "
+     >
+       <div
+         className="
+           w-[450px]
+           rounded-3xl
+           bg-slate-950
+           border
+           border-red-500/30
+           p-8
+           text-center
+         "
+       >
+         <div className="text-6xl mb-4">
+           <ShieldCheck className="w-16 h-16 text-red-400 mx-auto" />
+         </div>
 
-<div
-  className="
-    rounded-3xl
-    border
-    border-white/10
-    bg-white/[0.03]
-    backdrop-blur-xl
-    p-8
-  "
->
-  <h2 className="text-2xl font-bold text-white mb-8">
-    🤖 AI Career Insights
-  </h2>
+         <h2 className="text-2xl font-bold text-white">
+           KYC Verification Required
+         </h2>
 
-  <div className="grid md:grid-cols-4 gap-6">
+         <p className="text-slate-400 mt-3">
+           Complete AI KYC Verification before applying for projects.
+         </p>
 
-    <div className="rounded-2xl bg-slate-950 border border-white/10 p-5">
-      <p className="text-slate-400 text-sm">
-        Total Opportunities
-      </p>
-
-      <h3 className="text-3xl font-bold text-cyan-400 mt-2">
-        {projects.length}
-      </h3>
-    </div>
-
-    <div className="rounded-2xl bg-slate-950 border border-white/10 p-5">
-      <p className="text-slate-400 text-sm">
-        Digital Jobs
-      </p>
-
-      <h3 className="text-3xl font-bold text-blue-400 mt-2">
-        {digitalProjects.length}
-      </h3>
-    </div>
-
-    <div className="rounded-2xl bg-slate-950 border border-white/10 p-5">
-      <p className="text-slate-400 text-sm">
-        Field Jobs
-      </p>
-
-      <h3 className="text-3xl font-bold text-orange-400 mt-2">
-        {fieldProjects.length}
-      </h3>
-    </div>
-
-    <div className="rounded-2xl bg-slate-950 border border-white/10 p-5">
-      <p className="text-slate-400 text-sm">
-        AI Recommendation
-      </p>
-
-      <h3 className="text-xl font-bold text-green-400 mt-2">
-        {digitalProjects.length >= fieldProjects.length
-          ? "Digital Career"
-          : "Field Career"}
-      </h3>
-    </div>
-
-  </div>
-</div>
+         <div className="flex gap-4 mt-6 justify-center">
+           <button
+             onClick={() => router.push("/master/kyc")}
+             className="px-6 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold hover:from-green-500 hover:to-emerald-500 transition"
+           >
+             Verify Now
+           </button>
+           <button
+             onClick={() => setShowKycBlock(false)}
+             className="px-6 py-3 rounded-xl border border-white/[0.08] text-white hover:bg-white/10 transition"
+           >
+             Cancel
+           </button>
+         </div>
+       </div>
+     </div>
+   )}
 
       </div>
     </DesktopLayout>

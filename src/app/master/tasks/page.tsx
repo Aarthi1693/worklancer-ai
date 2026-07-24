@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import DesktopLayout from "@/components/layout/desktop-layout";
 import masterService from "@/services/master.service";
+import authService from "@/services/auth.service";
 import {
   ClipboardList,
   CheckCircle2,
@@ -46,7 +47,8 @@ export default function MyTasksPage() {
 
   async function loadTasks() {
     try {
-      const data = await masterService.getMyTasks();
+      const user = authService.getUser();
+      const data = await masterService.getMyTasks(user?.id || "");
       setTasks(data);
     } catch (err) {
       console.log(err);
@@ -57,9 +59,9 @@ export default function MyTasksPage() {
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) =>
-      task.project.title
-        .toLowerCase()
-        .includes(search.toLowerCase())
+      (task.project?.title || "").toLowerCase().includes(search.toLowerCase()) ||
+      (task.project?.description || "").toLowerCase().includes(search.toLowerCase()) ||
+      (task.project?.requiredSkills || "").toLowerCase().includes(search.toLowerCase())
     );
   }, [tasks, search]);
 
@@ -350,7 +352,7 @@ export default function MyTasksPage() {
                     </p>
 
                     <p className="mt-2 text-lg font-bold text-green-400">
-                      ₹{task.project.budget.toLocaleString()}
+                       ₹{(task.project?.budget ?? 0).toLocaleString()}
                     </p>
 
                   </div>
@@ -517,7 +519,7 @@ export default function MyTasksPage() {
               <div>
 
                 <h2 className="text-3xl font-bold text-white">
-                  {selectedTask.project.title}
+                  {selectedTask.project?.title}
                 </h2>
 
                 <p className="mt-2 text-slate-400">
@@ -550,7 +552,7 @@ export default function MyTasksPage() {
 
               <div className="rounded-2xl border border-white/10 bg-black/20 p-5 whitespace-pre-wrap text-slate-300">
 
-                {selectedTask.project.description}
+                {selectedTask.project?.description}
 
               </div>
 
@@ -568,12 +570,12 @@ export default function MyTasksPage() {
 
                 <span
                   className={`inline-block mt-3 rounded-full px-3 py-1 text-sm font-semibold ${
-                    selectedTask.project.taskType === "DIGITAL"
+                    selectedTask.project?.taskType === "DIGITAL"
                       ? "bg-cyan-500/20 text-cyan-400"
                       : "bg-orange-500/20 text-orange-400"
                   }`}
                 >
-                  {selectedTask.project.taskType}
+                  {selectedTask.project?.taskType}
                 </span>
 
               </div>
@@ -585,7 +587,7 @@ export default function MyTasksPage() {
                 </p>
 
                 <p className="mt-3 text-xl font-bold text-green-400">
-                  ₹{selectedTask.project.budget.toLocaleString()}
+                  ₹{selectedTask.project?.budget.toLocaleString()}
                 </p>
 
               </div>
@@ -597,7 +599,7 @@ export default function MyTasksPage() {
                 </p>
 
                 <p className="mt-3 text-white">
-                  {selectedTask.project.requiredSkills}
+                  {selectedTask.project?.requiredSkills}
                 </p>
 
               </div>

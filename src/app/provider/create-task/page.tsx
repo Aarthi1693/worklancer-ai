@@ -1,29 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense } from "react";
+import { useState, useEffect } from "react";
 import DesktopLayout from "@/components/layout/desktop-layout";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import projectService from "@/services/project.service";
 
-export default function CreateTaskPage() {
+function CreateTaskContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [taskType, setTaskType] =
     useState("digital");
 
   const [showSuccess, setShowSuccess] = useState(false);
-const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-const [title, setTitle] = useState("");
-const [description, setDescription] = useState("");
-const [budget, setBudget] = useState("");
-const [requiredSkills, setRequiredSkills] = useState("");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [budget, setBudget] = useState("");
+  const [requiredSkills, setRequiredSkills] = useState("");
 
-const [fieldTitle, setFieldTitle] = useState("");
-const [pickupLocation, setPickupLocation] = useState("");
-const [dropLocation, setDropLocation] = useState("");
-const [fieldDescription, setFieldDescription] = useState("");
-const [rewardAmount, setRewardAmount] = useState("");
+  const [fieldTitle, setFieldTitle] = useState("");
+  const [pickupLocation, setPickupLocation] = useState("");
+  const [dropLocation, setDropLocation] = useState("");
+  const [fieldDescription, setFieldDescription] = useState("");
+  const [rewardAmount, setRewardAmount] = useState("");
+
+  useEffect(() => {
+    const planTitle = searchParams.get("title");
+    const planDesc = searchParams.get("description");
+    const planSkills = searchParams.get("skills");
+    const planBudget = searchParams.get("budget");
+
+    if (planTitle) setTitle(planTitle);
+    if (planDesc) setDescription(planDesc);
+    if (planSkills) setRequiredSkills(planSkills);
+    if (planBudget) setBudget(planBudget);
+  }, [searchParams]);
 
   const handleCreateTask = async () => {
   // -----------------------------
@@ -357,7 +371,7 @@ Drop: ${dropLocation}`,
                   </p>
 
                   <h3 className="text-2xl font-bold text-green-400">
-                    ₹25,000
+                    N/A
                   </h3>
                 </div>
 
@@ -367,7 +381,7 @@ Drop: ${dropLocation}`,
                   </p>
 
                   <h3>
-                    UI Designer + Frontend + Backend
+                    N/A
                   </h3>
                 </div>
 
@@ -377,7 +391,7 @@ Drop: ${dropLocation}`,
                   </p>
 
                   <h3 className="text-2xl text-blue-400">
-                    96%
+                    N/A
                   </h3>
                 </div>
 
@@ -391,7 +405,7 @@ Drop: ${dropLocation}`,
                   </p>
 
                   <h3 className="text-2xl text-blue-400">
-                    12 KM
+                    N/A
                   </h3>
                 </div>
 
@@ -401,7 +415,7 @@ Drop: ${dropLocation}`,
                   </p>
 
                   <h3 className="text-2xl text-green-400">
-                    35 Minutes
+                    N/A
                   </h3>
                 </div>
 
@@ -411,7 +425,7 @@ Drop: ${dropLocation}`,
                   </p>
 
                   <h3 className="text-2xl text-yellow-400">
-                    ₹350
+                    N/A
                   </h3>
                 </div>
 
@@ -464,5 +478,13 @@ Drop: ${dropLocation}`,
 
       </div>
     </DesktopLayout>
+  );
+}
+
+export default function CreateTaskPage() {
+  return (
+    <Suspense>
+      <CreateTaskContent />
+    </Suspense>
   );
 }

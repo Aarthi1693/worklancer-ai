@@ -1,12 +1,56 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { usePathname } from "next/navigation";
+import masterService from "@/services/master.service";
+import careerAiService from "@/services/career-ai.service";
+import authService from "@/services/auth.service";
+
+interface Stats {
+  productivity: number;
+  skillMatch: number;
+  earningsForecast: number;
+  clientRating: number;
+}
 
 export default function AIPanel() {
   const pathname = usePathname();
-
   const isMaster = pathname.startsWith("/master");
+  const [stats, setStats] = useState<Stats>({
+    productivity: 0,
+    skillMatch: 0,
+    earningsForecast: 0,
+    clientRating: 0,
+  });
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [loading, setLoading] = useState(isMaster);
+
+  useEffect(() => {
+    if (!isMaster) return;
+
+    const load = async () => {
+      try {
+        const [dashboard, career] = await Promise.all([
+          masterService.getDashboard(),
+          careerAiService.analyze(authService.getUser()?.id || ""),
+        ]);
+        setStats({
+          productivity: dashboard.successRate,
+          skillMatch: Math.round(dashboard.performance),
+          earningsForecast: dashboard.earningsBreakdown?.totalEarnings || 0,
+          clientRating: dashboard.averageRating,
+        });
+        setSuggestions(career?.suggestions || []);
+      } catch (e) {
+        console.error("Failed to load AI panel data", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, [isMaster]);
 
   return (
     <aside
@@ -41,7 +85,7 @@ export default function AIPanel() {
               </p>
 
               <h3 className="text-3xl font-bold text-green-400 mt-2">
-                96%
+                {loading ? "..." : `${stats.productivity}%`}
               </h3>
             </div>
 
@@ -51,7 +95,7 @@ export default function AIPanel() {
               </p>
 
               <h3 className="text-3xl font-bold text-blue-400 mt-2">
-                94%
+                {loading ? "..." : `${stats.skillMatch}%`}
               </h3>
             </div>
 
@@ -61,7 +105,7 @@ export default function AIPanel() {
               </p>
 
               <h3 className="text-3xl font-bold text-purple-400 mt-2">
-                ₹55,000
+                {loading ? "..." : `₹${stats.earningsForecast.toLocaleString()}`}
               </h3>
             </div>
 
@@ -71,7 +115,7 @@ export default function AIPanel() {
               </p>
 
               <h3 className="text-3xl font-bold text-yellow-400 mt-2">
-                4.9★
+                {loading ? "..." : `${stats.clientRating}★`}
               </h3>
             </div>
 
@@ -81,8 +125,9 @@ export default function AIPanel() {
               </p>
 
               <p className="text-sm">
-                Complete AI Integration task today to
-                improve your performance score.
+                {suggestions.length > 0
+                  ? suggestions[0]
+                  : "No AI suggestions available."}
               </p>
             </div>
           </>
@@ -92,9 +137,8 @@ export default function AIPanel() {
               <p className="text-sm text-slate-400">
                 Productivity Increase
               </p>
-
               <h3 className="text-3xl font-bold text-emerald-400 mt-2">
-                +12%
+                +18%
               </h3>
             </div>
 
@@ -102,9 +146,8 @@ export default function AIPanel() {
               <p className="text-sm text-slate-400">
                 Tasks At Risk
               </p>
-
               <h3 className="text-3xl font-bold text-red-400 mt-2">
-                3
+                2
               </h3>
             </div>
 
@@ -112,9 +155,8 @@ export default function AIPanel() {
               <p className="text-sm text-slate-400">
                 Business Health
               </p>
-
-              <h3 className="text-3xl font-bold text-green-400 mt-2">
-                95/100
+              <h3 className="text-3xl font-bold text-emerald-400 mt-2">
+                Excellent
               </h3>
             </div>
 
@@ -122,9 +164,8 @@ export default function AIPanel() {
               <p className="text-sm text-slate-400">
                 Success Forecast
               </p>
-
               <h3 className="text-3xl font-bold text-blue-400 mt-2">
-                97%
+                92%
               </h3>
             </div>
 
@@ -132,10 +173,8 @@ export default function AIPanel() {
               <p className="text-sm text-slate-400 mb-2">
                 AI Suggestion
               </p>
-
               <p className="text-sm">
-                Assign UI redesign task to Frontend
-                Team Alpha.
+                Projects created before noon receive approximately 15% more freelancer applications.
               </p>
             </div>
           </>

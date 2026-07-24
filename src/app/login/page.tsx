@@ -16,31 +16,31 @@ export default function LoginPage() {
 
   const [role, setRole] = useState("provider");
 
- const handleLogin = async () => {
-  try {
-    setLoading(true);
-    setError("");
+const handleLogin = async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-    const response = await authService.login({
-      email,
-      password,
-    });
+      const response = await authService.login({
+        email,
+        password,
+      });
 
-    const user = response.user;
+      const user = response.user;
 
-    if (user.role === "PROVIDER") {
-      router.push("/provider");
-    } else if (user.role === "MASTER") {
-      router.push("/master");
-    } else {
-      router.push("/");
+      if (user.role === "PROVIDER") {
+        router.push("/provider");
+      } else if (user.role === "MASTER") {
+        router.push("/master");
+      } else {
+        router.push("/");
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Login Failed");
+    } finally {
+      setLoading(false);
     }
-  } catch (err: any) {
-    setError(err?.response?.data?.message || "Login Failed");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div

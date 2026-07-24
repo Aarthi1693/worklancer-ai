@@ -7,8 +7,32 @@ interface SubmitWorkDto {
   description: string;
 }
 
+interface DashboardResponse {
+  activeProjects: number;
+  completedProjects: number;
+  pendingProjects: number;
+  earnings: number;
+  performance: number;
+  successRate: number;
+  averageRating: number;
+  onTimeDelivery: number;
+  currentTasks: Array<{
+    id: string;
+    title: string;
+    budget: number;
+    status: string;
+    progress: number;
+    submissionStatus: string;
+  }>;
+  earningsBreakdown: {
+    totalEarnings: number;
+    pendingEarnings: number;
+    releasedEarnings: number;
+  };
+}
+
 class MasterService {
-  async getDashboard() {
+  async getDashboard(): Promise<DashboardResponse> {
     const response = await api.get("/master/dashboard");
     return response.data;
   }
@@ -23,8 +47,8 @@ class MasterService {
     return response.data;
   }
 
-  async getMyTasks() {
-  const response = await api.get("/master/my-tasks");
+  async getMyTasks(userId: string) {
+  const response = await api.get(`/master/my-tasks?userId=${userId}`);
   return response.data;
 }
 

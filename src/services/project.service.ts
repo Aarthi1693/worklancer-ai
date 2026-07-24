@@ -6,6 +6,7 @@ export interface CreateProjectDto {
   budget: number;
   requiredSkills: string;
   taskType: "DIGITAL" | "FIELD";
+  status?: string;
 }
 
 class ProjectService {

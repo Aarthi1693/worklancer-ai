@@ -50,7 +50,7 @@ export default function ProviderChatPage() {
       setConversations(data);
 
       setChatUnreadTotal(
-        data.reduce(
+        (data || []).reduce(
           (sum: number, c: any) =>
             sum + (c.unreadCount ?? 0),
           0

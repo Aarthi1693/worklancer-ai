@@ -42,24 +42,6 @@ interface Analytics {
   }[];
 }
 
-const feedbacks = [
-  {
-    client: "TechCorp",
-    rating: "5★",
-    feedback: "Excellent work quality",
-  },
-  {
-    client: "StartupX",
-    rating: "4.8★",
-    feedback: "Fast delivery",
-  },
-  {
-    client: "AI Labs",
-    rating: "5★",
-    feedback: "Outstanding performance",
-  },
-];
-
 const COLORS = [
   "#3B82F6",
   "#8B5CF6",
@@ -193,7 +175,7 @@ const taskOverview = [
 </p>
 
 <h2 className="text-3xl font-bold text-purple-400 mt-2">
-  ₹{analytics.earnings.toLocaleString()}
+  ₹{(analytics.earnings ?? 0).toLocaleString()}
 </h2>
           </div>
 
@@ -252,8 +234,8 @@ const taskOverview = [
       <div className="flex justify-between">
         <span>Completion Time</span>
         <span className="text-blue-400">
-  2.5 Days
-</span>
+    N/A
+ </span>
       </div>
 
       <div className="flex justify-between">
@@ -366,50 +348,9 @@ const taskOverview = [
             </h2>
           </div>
 
-          <table className="w-full">
-
-            <thead>
-              <tr className="border-b border-white/[0.08]">
-
-                <th className="p-4 text-left">
-                  Client
-                </th>
-
-                <th className="p-4 text-left">
-                  Rating
-                </th>
-
-                <th className="p-4 text-left">
-                  Feedback
-                </th>
-
-              </tr>
-            </thead>
-
-            <tbody>
-
-              {feedbacks.map((item) => (
-                <tr
-                  key={item.client}
-                  className="border-b border-white/5"
-                >
-                  <td className="p-4">
-                    {item.client}
-                  </td>
-
-                  <td className="p-4 text-yellow-400">
-                    {item.rating}
-                  </td>
-
-                  <td className="p-4">
-                    {item.feedback}
-                  </td>
-                </tr>
-              ))}
-
-            </tbody>
-
-          </table>
+          <div className="p-12 text-center text-slate-400">
+            No feedback data available.
+          </div>
 
         </div>
 
@@ -467,31 +408,27 @@ const taskOverview = [
 
             <div className="space-y-4">
 
-              <p>
-                🎯 Most Profitable Skill:
+              <p>🎯 Most Profitable Skill:
                 <span className="text-blue-400 ml-2">
-                  UI/UX Design
+                  N/A
                 </span>
               </p>
 
-              <p>
-                🚀 Most Requested Skill:
+              <p>🚀 Most Requested Skill:
                 <span className="text-green-400 ml-2">
-                  Frontend Development
+                  N/A
                 </span>
               </p>
 
-              <p>
-                📅 Best Working Day:
+              <p>📅 Best Working Day:
                 <span className="text-yellow-400 ml-2">
-                  Friday
+                  N/A
                 </span>
               </p>
 
-              <p>
-                📈 Career Trend:
+              <p>📈 Career Trend:
                 <span className="text-purple-400 ml-2">
-                  Strong Growth
+                  N/A
                 </span>
               </p>
 

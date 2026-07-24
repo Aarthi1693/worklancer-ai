@@ -300,7 +300,7 @@ useEffect(() => {
                       </td>
 
                       <td className="p-5 text-green-400 font-semibold">
-                        ₹{project.budget.toLocaleString()}
+                        ₹{(project.budget ?? 0).toLocaleString()}
                       </td>
 
                       <td className="p-5">
@@ -420,9 +420,9 @@ useEffect(() => {
               Success Rate
             </h3>
 
-            <p className="text-4xl font-bold text-purple-400 mt-4">
-              96%
-            </p>
+             <p className="text-4xl font-bold text-purple-400 mt-4">
+               N/A
+             </p>
 
             <p className="text-slate-500 mt-2">
               AI Predicted Success

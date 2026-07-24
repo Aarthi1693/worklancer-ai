@@ -45,11 +45,11 @@ export default function TaskManagementPage() {
     loadProjects();
   }, []);
 
-  const markCompleted = async (id: string) => {
+   const markCompleted = async (id: string) => {
     try {
       await projectService.updateProject(id, {
         status: "COMPLETED",
-      });
+      } as any);
 
       loadProjects();
     } catch (error) {
@@ -230,7 +230,7 @@ export default function TaskManagementPage() {
             </p>
 
             <h3 className="text-green-400 text-xl font-bold">
-              ₹{project.budget.toLocaleString()}
+              ₹{(project.budget ?? 0).toLocaleString()}
             </h3>
 
           </div>

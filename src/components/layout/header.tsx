@@ -11,13 +11,19 @@ import { usePathname } from "next/navigation";
 import Cookies from "js-cookie";
 import { NotificationService } from "@/services/notification.service";
 
+import authService from "@/services/auth.service";
 export default function Header() {
   const [showNotifications, setShowNotifications] =
-  useState(false);
+    useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [user, setUser] = useState<{ name?: string } | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
+    setIsMounted(true);
+    setUser(authService.getUser());
+
   const loadNotifications = async () => {
     try {
       const user = Cookies.get("user");
@@ -99,7 +105,7 @@ export default function Header() {
             placeholder={
               isMaster
                 ? "Search tasks, projects..."
-                : "Search tasks, users..."
+                : "Search projects, tasks..."
             }
             className="
               bg-transparent
@@ -133,7 +139,7 @@ export default function Header() {
             className="text-slate-300"
           />
 
-          {notifications.filter((n) => !n.isRead).length > 0 && (
+          {(notifications || []).filter((n) => !n.isRead).length > 0 && (
   <span
     className="
       absolute
@@ -151,7 +157,7 @@ export default function Header() {
       font-bold
     "
   >
-    {notifications.filter((n) => !n.isRead).length}
+    {(notifications || []).filter((n) => !n.isRead).length}
   </span>
 )}
         </button>
@@ -178,7 +184,7 @@ export default function Header() {
   </h2>
 
   <span className="text-xs text-blue-400">
-  {notifications.filter((n) => !n.isRead).length} New
+  {(notifications || []).filter((n) => !n.isRead).length} New
 </span>
 </div>
 
@@ -215,7 +221,7 @@ export default function Header() {
       </p>
 
       <p className="text-xs text-slate-500 mt-1">
-        {new Date(item.createdAt).toLocaleString()}
+                        {item.createdAt ? new Date(item.createdAt).toLocaleString() : "N/A"}
       </p>
     </div>
 
@@ -253,12 +259,12 @@ export default function Header() {
               font-bold
             "
           >
-            A
+            {isMounted && user?.name ? user.name.charAt(0).toUpperCase() : "U"}
           </div>
 
           <div className="hidden md:block">
             <p className="text-sm font-medium text-white">
-              Aarthi
+              {isMounted && user?.name ? user.name : "User"}
             </p>
 
             <p className="text-xs text-slate-500">

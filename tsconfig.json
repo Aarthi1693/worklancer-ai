@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-, "src/app/master/notifications"  ],
+  ],
   "exclude": ["node_modules"]
 }

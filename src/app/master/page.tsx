@@ -3,31 +3,88 @@
 import DesktopLayout from "@/components/layout/desktop-layout";
 import { useEffect, useState } from "react";
 import masterService from "@/services/master.service";
+import kycService from "@/services/kyc.service";
+import authService from "@/services/auth.service";
+import { ShieldCheck, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+
+interface CurrentTask {
+  id: string;
+  title: string;
+  budget: number;
+  status: string;
+  progress: number;
+  submissionStatus: string;
+}
+
+interface DashboardData {
+  activeProjects: number;
+  completedProjects: number;
+  pendingProjects: number;
+  earnings: number;
+  performance: number;
+  successRate: number;
+  averageRating: number;
+  onTimeDelivery: number;
+  currentTasks: CurrentTask[];
+  earningsBreakdown: {
+    totalEarnings: number;
+    pendingEarnings: number;
+    releasedEarnings: number;
+  };
+}
 
 export default function MasterDashboard() {
-  const [dashboard, setDashboard] = useState({
-  activeProjects: 0,
-  completedProjects: 0,
-  earnings: 0,
-  performance: 96,
-});
+  const [dashboard, setDashboard] = useState<DashboardData>({
+    activeProjects: 0,
+    completedProjects: 0,
+    pendingProjects: 0,
+    earnings: 0,
+    performance: 0,
+    successRate: 0,
+    averageRating: 0,
+    onTimeDelivery: 0,
+    currentTasks: [],
+    earningsBreakdown: {
+      totalEarnings: 0,
+      pendingEarnings: 0,
+      releasedEarnings: 0,
+    },
+  });
+  const [kycStatus, setKycStatus] = useState<{ status: string; score: number | null } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [careerData, setCareerData] = useState<{ suggestions?: string[] } | null>(null);
 
-const [loading, setLoading] = useState(true);
+  const user = authService.getUser();
 
-useEffect(() => {
-  const loadDashboard = async () => {
-    try {
-      const data = await masterService.getDashboard();
-      setDashboard(data);
-    } catch (error) {
-      console.error("Failed to load dashboard", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        const data = await masterService.getDashboard();
+        setDashboard(data);
+        const kyc = await kycService.getStatus();
+        setKycStatus({ status: kyc.status, score: kyc.score });
 
-  loadDashboard();
-}, []);
+        if (user?.id) {
+          const { default: careerAiService } = await import("@/services/career-ai.service");
+          try {
+            const career = await careerAiService.analyze(user.id);
+            setCareerData(career);
+          } catch (e) {
+            console.error("Failed to load career insights", e);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load dashboard", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboard();
+  }, [user?.id]);
+
+  const userName = user?.name?.split(" ")[0] || "User";
+
   return (
     <DesktopLayout>
       <div className="space-y-8">
@@ -35,12 +92,12 @@ useEffect(() => {
         {/* Header */}
         <div>
           <h1 className="text-5xl font-bold text-white">
-            Good Morning, Rahul 👋
+            Good Morning, {userName} 👋
           </h1>
 
           <p className="mt-3 text-slate-400">
-            You have 5 active tasks today.
-            AI predicts a productivity score of 96%.
+            You have {loading ? "..." : dashboard.activeProjects} active tasks today.
+            AI predicts a productivity score of {dashboard.successRate}%.
           </p>
 
           <div className="flex gap-4 mt-6">
@@ -87,6 +144,47 @@ useEffect(() => {
           </div>
         </div>
 
+        {/* KYC Widget */}
+        {kycStatus && (
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)] p-5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <ShieldCheck size={24} className={
+                kycStatus.status === "VERIFIED" ? "text-green-400" :
+                kycStatus.status === "PENDING" ? "text-yellow-400" : "text-red-400"
+              } />
+              <div>
+                <p className="text-sm text-slate-400">KYC Status</p>
+                <p className="text-lg font-bold text-white">
+                  {kycStatus.status === "VERIFIED" ? "KYC Verified" :
+                   kycStatus.status === "PENDING" ? "Verification Pending" :
+                   kycStatus.status === "REJECTED" ? "Verification Rejected" :
+                   "Not Started"}
+                </p>
+              </div>
+            </div>
+            {kycStatus.status === "VERIFIED" && (
+              <div className="flex items-center gap-1 text-green-400 text-sm">
+                <CheckCircle2 size={16} /> {kycStatus.score}/100
+              </div>
+            )}
+            {kycStatus.status === "PENDING" && (
+              <div className="flex items-center gap-1 text-yellow-400 text-sm">
+                <AlertTriangle size={16} /> Pending Review
+              </div>
+            )}
+            {kycStatus.status === "REJECTED" && (
+              <div className="flex items-center gap-1 text-red-400 text-sm">
+                <XCircle size={16} /> Rejected
+              </div>
+            )}
+            {!kycStatus.status && (
+              <div className="flex items-center gap-1 text-slate-400 text-sm">
+                Not Started
+              </div>
+            )}
+          </div>
+        )}
+
         {/* KPI Cards */}
         <div className="grid grid-cols-4 gap-6">
 
@@ -116,7 +214,7 @@ useEffect(() => {
             </p>
 
             <h2 className="text-3xl font-bold mt-2 text-blue-400">
-              {loading ? "..." : `₹${dashboard.earnings}`}
+              {loading ? "..." : `₹${(dashboard.earningsBreakdown?.totalEarnings ?? 0).toLocaleString()}`}
             </h2>
           </div>
 
@@ -150,49 +248,25 @@ useEffect(() => {
             </h2>
 
             <div className="space-y-5">
+              {dashboard.currentTasks.length === 0 && !loading ? (
+                <p className="text-slate-400 text-sm">No active tasks.</p>
+              ) : (
+                dashboard.currentTasks.map((task) => (
+                  <div key={task.id}>
+                    <div className="flex justify-between mb-2">
+                      <span>{task.title}</span>
+                      <span>{task.progress}%</span>
+                    </div>
 
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span>UI Design</span>
-                  <span>90%</span>
-                </div>
-
-                <div className="h-2 bg-slate-700 rounded-full">
-                  <div
-                    className="h-2 bg-green-500 rounded-full"
-                    style={{ width: "90%" }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span>Landing Page</span>
-                  <span>75%</span>
-                </div>
-
-                <div className="h-2 bg-slate-700 rounded-full">
-                  <div
-                    className="h-2 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 transition-all duration-1000 rounded-full"
-                    style={{ width: "75%" }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span>AI Integration</span>
-                  <span>40%</span>
-                </div>
-
-                <div className="h-2 bg-slate-700 rounded-full">
-                  <div
-                    className="h-2 bg-purple-500 rounded-full"
-                    style={{ width: "40%" }}
-                  />
-                </div>
-              </div>
-
+                    <div className="h-2 bg-slate-700 rounded-full">
+                      <div
+                        className="h-2 bg-green-500 rounded-full"
+                        style={{ width: `${task.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -218,7 +292,7 @@ useEffect(() => {
                 </p>
 
                 <h3 className="text-3xl font-bold text-blue-400 mt-2">
-                  ₹42,500
+                  ₹{loading ? "..." : (dashboard.earningsBreakdown?.totalEarnings ?? 0).toLocaleString()}
                 </h3>
               </div>
 
@@ -228,7 +302,7 @@ useEffect(() => {
                 </p>
 
                 <h3 className="text-xl font-semibold text-yellow-400 mt-2">
-                  ₹8,500
+                  ₹{loading ? "..." : (dashboard.earningsBreakdown?.pendingEarnings ?? 0).toLocaleString()}
                 </h3>
               </div>
 
@@ -238,7 +312,7 @@ useEffect(() => {
                 </p>
 
                 <h3 className="text-xl font-semibold text-green-400 mt-2">
-                  ₹34,000
+                  ₹{loading ? "..." : (dashboard.earningsBreakdown?.releasedEarnings ?? 0).toLocaleString()}
                 </h3>
               </div>
 
@@ -267,10 +341,18 @@ useEffect(() => {
             </h2>
 
             <div className="space-y-3 text-slate-300">
-              <p>🚀 Learn Next.js Advanced Routing</p>
-              <p>📈 React demand increased by 12%</p>
-              <p>🎯 UI/UX skills match 95% of market</p>
-              <p>🏆 Recommended Certification: Google UX Design</p>
+              {careerData && careerData.suggestions && careerData.suggestions.length > 0 ? (
+                careerData.suggestions.map((suggestion, idx) => (
+                  <p key={idx}>✓ {suggestion}</p>
+                ))
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-slate-300">✓ Learn System Design.</p>
+                  <p className="text-slate-300">✓ Improve Node.js skills.</p>
+                  <p className="text-slate-300">✓ Practice DSA regularly.</p>
+                  <p className="text-slate-300">✓ Complete Azure or AWS certification.</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -296,7 +378,7 @@ useEffect(() => {
                 </p>
 
                 <h3 className="text-2xl font-bold text-green-400">
-                  98%
+                  {loading ? "..." : `${dashboard.successRate}%`}
                 </h3>
               </div>
 
@@ -306,7 +388,7 @@ useEffect(() => {
                 </p>
 
                 <h3 className="text-2xl font-bold text-blue-400">
-                  4.9 ★
+                  {loading ? "..." : `${dashboard.averageRating} ★`}
                 </h3>
               </div>
 
@@ -316,7 +398,7 @@ useEffect(() => {
                 </p>
 
                 <h3 className="text-2xl font-bold text-purple-400">
-                  96%
+                  {loading ? "..." : `${dashboard.onTimeDelivery}%`}
                 </h3>
               </div>
 

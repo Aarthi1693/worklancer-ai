@@ -1,231 +1,117 @@
 "use client";
 
+import { useState } from "react";
 import DesktopLayout from "@/components/layout/desktop-layout";
-import {
-  BrainCircuit,
-  TrendingUp,
-  CalendarDays,
-} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Sparkles, ArrowLeft } from "lucide-react";
+import AIPlanningForm from "@/components/provider/ai-planning-form";
+import AIPlanningResults from "@/components/provider/ai-planning-results";
+import { ToastProvider } from "@/components/ui/toast";
+import type { ProjectPlanResponse } from "@/types/ai-planning";
+import { aiPlanningService } from "@/services/ai-planning.service";
+import { useToast } from "@/components/ui/toast";
+import authService from "@/services/auth.service";
+
+function PlanningContent() {
+  const router = useRouter();
+  const { addToast } = useToast();
+  const [plan, setPlan] = useState<ProjectPlanResponse | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formData, setFormData] = useState<{
+    title: string;
+    description: string;
+    category: string;
+    projectType: string;
+    budget: string;
+    deadline: string;
+    requiredSkills: string;
+    teamSize: string;
+    priority: string;
+  } | null>(null);
+
+  const user = authService.getUser();
+
+  const handlePlanGenerated = (data: ProjectPlanResponse) => {
+    setPlan(data);
+  };
+
+  const handleSave = async () => {
+    if (!plan || !formData) return;
+
+    try {
+      setIsSaving(true);
+      await aiPlanningService.savePlan({
+        ...formData,
+        planData: plan,
+        userId: user?.id,
+      });
+      addToast("Plan saved successfully!", "success");
+    } catch (error) {
+      console.error("Failed to save plan:", error);
+      addToast("Failed to save plan. Please try again.", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleFormDataSave = (data: {
+    title: string;
+    description: string;
+    category: string;
+    projectType: string;
+    budget: string;
+    deadline: string;
+    requiredSkills: string;
+    teamSize: string;
+    priority: string;
+  }) => {
+    setFormData(data);
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <Sparkles className="text-blue-400" size={28} />
+            <h1 className="text-4xl font-bold text-white">
+              AI Project Planning
+            </h1>
+          </div>
+          <p className="text-slate-400 mt-2">
+            Generate intelligent project execution plans with AI before publishing your task.
+          </p>
+        </div>
+
+        <button
+          onClick={() => router.push("/provider")}
+          className="
+            flex items-center gap-2 px-5 py-3 rounded-xl
+            border border-white/[0.08] hover:bg-white/5 transition-all
+          "
+        >
+          <ArrowLeft size={18} />
+          Dashboard
+        </button>
+      </div>
+
+      {/* Main Content */}
+      {!plan ? (
+        <AIPlanningForm onPlanGenerated={handlePlanGenerated} onFormDataSave={handleFormDataSave} />
+      ) : (
+        <AIPlanningResults plan={plan} onSave={handleSave} isSaving={isSaving} />
+      )}
+    </div>
+  );
+}
 
 export default function AIPlanningPage() {
   return (
-  <DesktopLayout>
-    <div className="space-y-8">
-
-      {/* Page Header */}
-      <div>
-        <h1 className="text-4xl font-bold text-white">
-          AI Project Planning
-        </h1>
-
-        <p className="text-slate-400 mt-2">
-          AI-generated project forecasts, recommendations and resource planning.
-        </p>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-6">
-
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)] p-5">
-            <p className="text-slate-400 text-sm">
-              Success Probability
-            </p>
-
-            <h2 className="text-3xl font-bold text-green-400 mt-2">
-              94%
-            </h2>
-          </div>
-
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)] p-5">
-            <p className="text-slate-400 text-sm">
-              Cost Forecast
-            </p>
-
-            <h2 className="text-3xl font-bold text-blue-400 mt-2">
-              ₹85K
-            </h2>
-          </div>
-
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)] p-5">
-            <p className="text-slate-400 text-sm">
-              Deadline Prediction
-            </p>
-
-            <h2 className="text-3xl font-bold text-purple-400 mt-2">
-              21 Days
-            </h2>
-          </div>
-
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)] p-5">
-            <p className="text-slate-400 text-sm">
-              Risk Level
-            </p>
-
-            <h2 className="text-3xl font-bold text-yellow-400 mt-2">
-              Low
-            </h2>
-          </div>
-
-        </div>
-
-        {/* AI Recommendations */}
-        <div className="rounded-3xl border border-purple-500/20 shadow-[0_0_40px_rgba(124,58,237,0.15)] bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6">
-
-          <div className="flex items-center gap-3 mb-5">
-            <BrainCircuit className="text-blue-400" />
-            <h2 className="text-2xl font-bold">
-              AI Recommendations
-            </h2>
-          </div>
-
-          <div className="space-y-3 text-slate-300">
-
-            <p>
-              ✅ Assign Frontend module to Priya Verma
-            </p>
-
-            <p>
-              ✅ Increase UI resources by 1 member
-            </p>
-
-            <p>
-              ⚠ Backend workload exceeds 85%
-            </p>
-
-            <p>
-              🚀 Current team can finish before deadline
-            </p>
-
-          </div>
-        </div>
-
-        {/* Timeline + Resources */}
-        <div className="grid grid-cols-2 gap-6">
-
-          {/* Timeline */}
-          <div className="rounded-3xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6">
-
-            <div className="flex items-center gap-3 mb-5">
-              <CalendarDays className="text-purple-400" />
-              <h2 className="text-2xl font-bold">
-                Project Timeline
-              </h2>
-            </div>
-
-            <div className="space-y-4">
-
-              <div className="flex justify-between">
-                <span>Planning Phase</span>
-                <span className="text-green-400">
-                  Completed
-                </span>
-              </div>
-
-              <div className="flex justify-between">
-                <span>Design Phase</span>
-                <span className="text-green-400">
-                  Completed
-                </span>
-              </div>
-
-              <div className="flex justify-between">
-                <span>Development Phase</span>
-                <span className="text-yellow-400">
-                  In Progress
-                </span>
-              </div>
-
-              <div className="flex justify-between">
-                <span>Testing Phase</span>
-                <span className="text-slate-400">
-                  Upcoming
-                </span>
-              </div>
-
-              <div className="flex justify-between">
-                <span>Deployment</span>
-                <span className="text-slate-400">
-                  Upcoming
-                </span>
-              </div>
-
-            </div>
-          </div>
-
-          {/* Resource Allocation */}
-          <div className="rounded-3xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6">
-
-            <div className="flex items-center gap-3 mb-5">
-              <TrendingUp className="text-green-400" />
-              <h2 className="text-2xl font-bold">
-                Resource Allocation
-              </h2>
-            </div>
-
-            <div className="space-y-5">
-
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span>Frontend</span>
-                  <span>35%</span>
-                </div>
-
-                <div className="h-2 bg-slate-700 rounded-full">
-                  <div
-                    className="h-2 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 transition-all duration-1000 rounded-full"
-                    style={{ width: "35%" }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span>Backend</span>
-                  <span>30%</span>
-                </div>
-
-                <div className="h-2 bg-slate-700 rounded-full">
-                  <div
-                    className="h-2 bg-purple-500 rounded-full"
-                    style={{ width: "30%" }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span>UI/UX</span>
-                  <span>20%</span>
-                </div>
-
-                <div className="h-2 bg-slate-700 rounded-full">
-                  <div
-                    className="h-2 bg-green-500 rounded-full"
-                    style={{ width: "20%" }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span>Testing</span>
-                  <span>15%</span>
-                </div>
-
-                <div className="h-2 bg-slate-700 rounded-full">
-                  <div
-                    className="h-2 bg-yellow-500 rounded-full"
-                    style={{ width: "15%" }}
-                  />
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-        </div>
-
-      </div>
+    <DesktopLayout>
+      <ToastProvider>
+        <PlanningContent />
+      </ToastProvider>
     </DesktopLayout>
   );
 }

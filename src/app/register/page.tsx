@@ -3,14 +3,36 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
+import authService from "@/services/auth.service";
 
 export default function RegisterPage() {
   const router = useRouter();
 
+  const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
   const [role, setRole] = useState("provider");
+  const [error, setError] = useState("");
 
-  const handleRegister = () => {
-    router.push("/login");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    try {
+      await authService.register({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        role: role.toUpperCase() as "PROVIDER" | "MASTER",
+      });
+
+      router.push("/login");
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Registration failed. Please try again.");
+    }
   };
 
   return (
@@ -27,7 +49,8 @@ export default function RegisterPage() {
         p-6
       "
     >
-      <div
+      <form
+        onSubmit={handleSubmit}
         className="
           w-full
           max-w-lg
@@ -76,6 +99,8 @@ export default function RegisterPage() {
 
           <input
             type="text"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder="Enter full name"
             className="
               w-full
@@ -98,6 +123,8 @@ export default function RegisterPage() {
 
           <input
             type="email"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
             placeholder="Enter email"
             className="
               w-full
@@ -120,6 +147,8 @@ export default function RegisterPage() {
 
           <input
             type="password"
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
             placeholder="Create password"
             className="
               w-full
@@ -142,6 +171,8 @@ export default function RegisterPage() {
 
           <input
             type="password"
+            value={form.confirmPassword}
+            onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
             placeholder="Confirm password"
             className="
               w-full
@@ -186,8 +217,12 @@ export default function RegisterPage() {
         </div>
 
         {/* Create Account */}
+        {error && (
+          <div className="mb-4 text-center text-red-400 text-sm">{error}</div>
+        )}
+
         <button
-          onClick={handleRegister}
+          type="submit"
           className="
             w-full
             py-3
@@ -222,7 +257,7 @@ export default function RegisterPage() {
 
         </div>
 
-      </div>
+      </form>
     </div>
   );
 }

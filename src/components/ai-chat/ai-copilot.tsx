@@ -49,12 +49,7 @@ Try using the quick actions below 🚀`,
       return `
 📈 Earnings Analysis
 
-• Monthly Earnings: ₹42,500
-• Pending Payments: ₹8,500
-• Growth Trend: +18%
-
-Recommendation:
-Focus on UI/UX projects to increase earnings.
+No earnings data available.
 `;
     }
 
@@ -62,11 +57,7 @@ Focus on UI/UX projects to increase earnings.
       return `
 👥 Recommended Team
 
-Frontend: Rahul Sharma
-Backend: Priya Verma
-AI Engineer: Arjun Singh
-
-Estimated Cost: ₹85,000
+No team data available.
 `;
     }
 
@@ -74,13 +65,7 @@ Estimated Cost: ₹85,000
       return `
 🚀 Career Roadmap
 
-2026 → Advanced Next.js
-
-2027 → System Design
-
-2028 → AI Product Architect
-
-Expected Salary: ₹24 LPA
+No roadmap data available.
 `;
     }
 
@@ -88,15 +73,7 @@ Expected Salary: ₹24 LPA
   return `
 📄 Project Proposal
 
-Phase 1 → Research
-
-Phase 2 → UI Design
-
-Phase 3 → Development
-
-Phase 4 → Testing
-
-Estimated Timeline: 8 Weeks
+No proposal data available.
 `;
 }
 
@@ -104,38 +81,15 @@ if (msg.includes("skill")) {
   return `
 🎯 Skill Recommendation
 
-Recommended Skills:
-
-• Advanced Next.js
-
-• System Design
-
-• AI Product Development
-
-• Cloud Architecture
-
-Expected Career Growth: +35%
+No skill data available.
 `;
 }
 
-if (
-  msg.includes("task") ||
-  msg.includes("tasks")
-) {
+if (msg.includes("task")) {
   return `
 📋 Suitable Tasks
 
-Based on your profile:
-
-• UI/UX Design System
-
-• Dashboard Development
-
-• SaaS Landing Page
-
-• AI Analytics Interface
-
-Match Score: 94%
+No task data available.
 `;
 }
 
@@ -143,42 +97,15 @@ if (msg.includes("profile")) {
   return `
 👤 Profile Analysis
 
-Strengths:
-
-• UI/UX Design
-
-• React Development
-
-• Client Communication
-
-Areas To Improve:
-
-• System Design
-
-• AI Integration
-
-Profile Score: 94/100
+No profile data available.
 `;
 }
 
-if (
-  msg.includes("cost") ||
-  msg.includes("estimate")
-) {
+if (msg.includes("cost")) {
   return `
 💰 Project Cost Estimation
 
-Frontend: ₹30,000
-
-Backend: ₹35,000
-
-AI Module: ₹20,000
-
-Testing: ₹10,000
-
-Estimated Total:
-
-₹95,000
+No cost data available.
 `;
 }
 

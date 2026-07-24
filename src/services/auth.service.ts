@@ -11,8 +11,6 @@ import {
 
 class AuthService {
   async login(data: LoginDto): Promise<LoginResponse> {
-    console.log("Calling backend login API...");
-
     const response = await api.post<LoginResponse>(
       "/auth/login",
       data
@@ -68,6 +66,10 @@ class AuthService {
     return JSON.parse(user);
   }
 
+  setUser(user: { id: string; name: string; email: string; role: string; [key: string]: unknown }) {
+    Cookies.set("user", JSON.stringify(user));
+  }
+
   getToken() {
     return Cookies.get("access_token");
   }
@@ -77,4 +79,6 @@ class AuthService {
   }
 }
 
-export default new AuthService();
+const authService = new AuthService();
+
+export default authService;
