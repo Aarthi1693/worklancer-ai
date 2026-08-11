@@ -10,6 +10,11 @@ export interface CreateProjectDto {
 }
 
 class ProjectService {
+  async getProject(id: string) {
+    const response = await api.get(`/projects/${id}`);
+    return response.data;
+  }
+
   async createProject(data: CreateProjectDto) {
     const response = await api.post("/projects", data);
     return response.data;
@@ -31,4 +36,6 @@ class ProjectService {
   }
 }
 
-export default new ProjectService();
+const projectService = new ProjectService();
+
+export default projectService;

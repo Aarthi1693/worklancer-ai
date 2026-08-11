@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Cookies from "js-cookie";
 
 import DesktopLayout from "@/components/layout/desktop-layout";
@@ -14,25 +15,42 @@ import EmptyChat from "@/components/chat/EmptyChat";
 
 import chatService from "@/services/chat.service";
 import { setChatUnreadTotal } from "@/lib/chatUnread";
+import { getSocket } from "@/services/socket.service";
 
 export default function MasterChatPage() {
+  const searchParams = useSearchParams();
+
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [conversations, setConversations] = useState<any[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [message, setMessage] = useState("");
 
-  const [conversationsLoading, setConversationsLoading] = useState(true);
-  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [loadingChats, setLoadingChats] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
     loadConversations();
   }, []);
 
+  useEffect(() => {
+    const socket = getSocket();
+
+    socket.on("receiveMessage", (msg) => {
+      if (
+        selectedConversation &&
+        msg.conversationId === selectedConversation.id
+      ) {
+        setMessages((prev) => [...prev, msg]);
+      }
+    });
+
+    return () => socket.off("receiveMessage");
+  }, [selectedConversation]);
+
   async function loadConversations() {
     try {
-      setConversationsLoading(true);
       const user = JSON.parse(Cookies.get("user") || "{}");
 
       setCurrentUser(user);
@@ -43,89 +61,82 @@ export default function MasterChatPage() {
 
       setChatUnreadTotal(
         (data || []).reduce(
-          (sum: number, c: any) =>
-            sum + (c.unreadCount ?? 0),
+          (sum: number, c: any) => sum + (c.unreadCount ?? 0),
           0
         )
       );
 
-      if (data.length > 0) {
-        setSelectedConversation(data[0]);
-        await loadMessages(data[0].id);
+      const conversationId = searchParams.get("conversationId");
+
+      const target =
+        data.find((c: any) => c.id === conversationId) ||
+        data[0] ||
+        null;
+
+      if (target) {
+        setSelectedConversation(target);
+
+        getSocket().emit("joinConversation", {
+          conversationId: target.id,
+        });
+
+        loadMessages(target.id);
       }
-    } catch (error) {
-      console.log(error);
     } finally {
-      setConversationsLoading(false);
+      setLoadingChats(false);
     }
   }
 
-  async function loadMessages(conversationId: string) {
-    try {
-      setMessagesLoading(true);
-      const data = await chatService.getMessages(conversationId);
-      setMessages(data);
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setMessagesLoading(false);
-    }
+  async function loadMessages(id: string) {
+    setLoadingMessages(true);
+
+    const data = await chatService.getMessages(id);
+
+    setMessages(data);
+
+    setLoadingMessages(false);
   }
 
-  const sendMessage = async () => {
-    if (!message.trim() || !selectedConversation) return;
+  async function sendMessage() {
+    if (!message.trim()) return;
 
-    try {
-      setSending(true);
-      await chatService.sendMessage({
-        conversationId: selectedConversation.id,
-        senderId: currentUser.id,
-        message,
-      });
+    setSending(true);
 
-      setMessage("");
+    await chatService.sendMessage({
+      conversationId: selectedConversation.id,
+      senderId: currentUser.id,
+      message,
+    });
 
-      await loadMessages(selectedConversation.id);
-    } catch (err) {
-      console.log(err);
-    } finally {
-      setSending(false);
-    }
-  };
+    setMessage("");
+
+    await loadMessages(selectedConversation.id);
+
+    setSending(false);
+  }
 
   return (
     <DesktopLayout>
-      <div className="
-        flex
-        h-full
-        gap-6
-        overflow-hidden
-      ">
+      <div className="flex h-[calc(100vh-110px)] gap-6">
 
         <ChatSidebar
           conversations={conversations}
           selectedConversation={selectedConversation}
           currentUserId={currentUser?.id || ""}
+          loading={loadingChats}
           onSelect={(conversation) => {
             setSelectedConversation(conversation);
+
+            getSocket().emit("joinConversation", {
+              conversationId: conversation.id,
+            });
+
             loadMessages(conversation.id);
           }}
-          loading={conversationsLoading}
         />
 
-        <div
-          className="
-            flex-1
-            flex
-            flex-col
-            overflow-hidden
-            rounded-3xl
-            border
-            border-white/10
-            bg-white/[0.03]
-            backdrop-blur-xl
-          "
-        >
+        <div className="flex-1 bg-white rounded-3xl border shadow-sm flex flex-col overflow-hidden">
+
           {selectedConversation ? (
             <>
               <ChatHeader
@@ -136,25 +147,25 @@ export default function MasterChatPage() {
               <MessageList
                 messages={messages}
                 currentUserId={currentUser?.id || ""}
-                loading={messagesLoading}
+                loading={loadingMessages}
               />
 
               <SuggestedReplies
-                onSelect={(reply) => setMessage(reply)}
+                onSelect={setMessage}
               />
 
               <ChatInput
-                onSend={sendMessage}
                 value={message}
                 onChange={setMessage}
+                onSend={sendMessage}
                 loading={sending}
               />
             </>
           ) : (
             <EmptyChat />
           )}
-        </div>
 
+        </div>
       </div>
     </DesktopLayout>
   );

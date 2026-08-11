@@ -74,10 +74,10 @@ const providerMenu = [
     href: "/provider/ai-planning",
   },
   {
-    title: "Saved Plans",
-    icon: FolderOpen,
-    href: "/provider/saved-plans",
-  },
+  title: "Saved Plans",
+  icon: FolderOpen,
+  href: "/provider/saved-ai-plans",
+},
   {
     title: "Task Management",
     icon: ClipboardList,
@@ -92,7 +92,7 @@ const providerMenu = [
   {
   title: "Submitted Work",
   icon: ClipboardCheck,
-  href: "/provider/submissions",
+  href: "/provider/submitted-work",
   },
 
   {

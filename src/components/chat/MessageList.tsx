@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-
 import MessageBubble from "./MessageBubble";
 import TypingIndicator from "./TypingIndicator";
 
@@ -10,7 +9,9 @@ interface Message {
   id: string;
   message: string;
   senderId: string;
+  senderName?: string;
   createdAt: string;
+  status?: string;
 }
 
 interface Props {
@@ -31,34 +32,22 @@ export default function MessageList({
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
-
-  useEffect(() => {
-    console.log("====== MESSAGE DEBUG ======");
-    console.log("Current User:", currentUserId);
-
-    messages.forEach((m) => {
-      console.log({
-        message: m.message,
-        senderId: m.senderId,
-        own: m.senderId === currentUserId,
-      });
+    bottomRef.current?.scrollIntoView({
+      behavior: "smooth",
     });
-  }, [messages, currentUserId]);
+  }, [messages]);
 
   if (loading) {
     return (
-      <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
-        {[...Array(5)].map((_, i) => (
+      <div className="flex-1 overflow-y-auto bg-gray-50 p-6 space-y-4">
+        {[...Array(6)].map((_, i) => (
           <div
             key={i}
-            className={`flex ${i % 2 === 0 ? "justify-end" : "justify-start"}`}
+            className={`flex ${
+              i % 2 === 0 ? "justify-start" : "justify-end"
+            }`}
           >
-            <div className="max-w-[70%] px-5 py-3 rounded-2xl bg-slate-800/40 animate-pulse">
-              <div className="h-3 bg-slate-700/40 rounded w-32 mb-3" />
-              <div className="h-2.5 bg-slate-700/30 rounded w-12 ml-auto" />
-            </div>
+            <div className="w-56 h-16 rounded-2xl bg-gray-200 animate-pulse" />
           </div>
         ))}
       </div>
@@ -67,14 +56,24 @@ export default function MessageList({
 
   if (messages.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">
-        No messages yet. Start the conversation!
+      <div className="flex-1 flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="text-5xl mb-3">💬</div>
+
+          <h3 className="text-lg font-semibold text-gray-700">
+            No messages yet
+          </h3>
+
+          <p className="text-gray-500 mt-2">
+            Start the conversation.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-3">
+    <div className="flex-1 overflow-y-auto bg-gray-50 p-6 space-y-4">
       {messages.map((msg, index) => (
         <motion.div
           key={msg.id}
@@ -82,9 +81,9 @@ export default function MessageList({
           animate={{ opacity: 1, y: 0 }}
           transition={{
             duration: 0.25,
-            delay: Math.min(index * 0.04, 0.4),
+            delay: Math.min(index * 0.04, 0.3),
           }}
-          className={`flex w-full ${
+          className={`flex ${
             msg.senderId === currentUserId
               ? "justify-end"
               : "justify-start"
@@ -93,6 +92,8 @@ export default function MessageList({
           <MessageBubble
             own={msg.senderId === currentUserId}
             message={msg.message}
+            senderName={msg.senderName}
+            status={msg.status}
             time={new Date(msg.createdAt).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
@@ -101,7 +102,9 @@ export default function MessageList({
         </motion.div>
       ))}
 
-      {isTyping && <TypingIndicator name={typingName} />}
+      {isTyping && (
+        <TypingIndicator name={typingName} />
+      )}
 
       <div ref={bottomRef} />
     </div>

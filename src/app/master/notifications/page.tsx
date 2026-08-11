@@ -1,7 +1,10 @@
-"use client";
+import DesktopLayout from "@/components/layout/desktop-layout";
+import NotificationPage from "@/components/notifications/NotificationPage";
 
-import NotificationsPage from "@/components/notifications/NotificationsPage";
-
-export default function MasterNotifications() {
-  return <NotificationsPage role="master" />;
+export default function Page() {
+  return (
+    <DesktopLayout>
+      <NotificationPage />
+    </DesktopLayout>
+  );
 }

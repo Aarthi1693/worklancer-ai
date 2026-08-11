@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import MyTasksHero from "@/assets/images/my-tasks-hero.png";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import DesktopLayout from "@/components/layout/desktop-layout";
 import masterService from "@/services/master.service";
 import authService from "@/services/auth.service";
+import { useSubmissionSocket } from "@/hooks/useSubmissionSocket";
+import { SubmissionEventPayload } from "@/services/socket.service";
 import {
   ClipboardList,
   CheckCircle2,
@@ -21,7 +24,7 @@ interface MyTask {
 
   submission?: {
     id: string;
-    status: "PENDING" | "APPROVED" | "REJECTED";
+    status: string;
   };
 
   project: {
@@ -41,11 +44,7 @@ export default function MyTasksPage() {
   const [selectedTask, setSelectedTask] =
     useState<MyTask | null>(null);
 
-  useEffect(() => {
-    loadTasks();
-  }, []);
-
-  async function loadTasks() {
+  const loadTasks = useCallback(async () => {
     try {
       const user = authService.getUser();
       const data = await masterService.getMyTasks(user?.id || "");
@@ -55,7 +54,53 @@ export default function MyTasksPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    loadTasks();
+  }, [loadTasks]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  const applySubmissionEvent = useCallback(
+    (payload: SubmissionEventPayload) => {
+      const { submissionId, applicationId, status } = payload;
+      if (!submissionId && !applicationId && !status) return;
+
+      setTasks((prev) =>
+        prev.map((task) => {
+          const byApp = applicationId ? task.id === applicationId : false;
+          const bySub = submissionId
+            ? task.submission?.id === submissionId
+            : false;
+          if (!byApp && !bySub) return task;
+
+          if (!task.submission) {
+            if (!status || !submissionId) return task;
+            return {
+              ...task,
+              submission: { id: submissionId, status: status },
+            };
+          }
+
+          return {
+            ...task,
+            submission: {
+              ...task.submission,
+              status: status ?? task.submission.status,
+              id: submissionId ?? task.submission.id,
+            },
+          };
+        }),
+      );
+    },
+    [],
+  );
+
+  useSubmissionSocket({
+    onCreated: applySubmissionEvent,
+    onUpdated: applySubmissionEvent,
+  });
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) =>
@@ -80,575 +125,365 @@ export default function MyTasksPage() {
   ).length;
 
   return (
-    <DesktopLayout>
+  <DesktopLayout>
+    <div className="space-y-8">
 
-      <div className="space-y-8">
+      {/* ================= HERO ================= */}
 
-        {/* Header */}
+      <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm p-8">
 
-        <div>
+        <div className="absolute right-2 top-[48%] -translate-y-1/2 hidden lg:block">
+  <img
+    src={MyTasksHero.src}
+    alt="My Tasks"
+    className="w-[450px] object-contain scale-110"
+  />
+</div>
 
-          <h1 className="text-4xl font-bold text-white">
+        <div className="relative z-10 max-w-2xl">
+
+          <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-4 py-1 text-sm font-semibold text-blue-700">
+            📋 Task Workspace
+          </span>
+
+          <h1 className="mt-5 text-5xl font-bold text-slate-900">
             My Tasks
           </h1>
 
-          <p className="text-slate-400 mt-2">
-            Track assigned projects, monitor submissions and view progress.
+          <p className="mt-5 text-lg leading-8 text-slate-600">
+            Manage your{" "}
+            <span className="font-semibold text-blue-600">
+              Digital
+            </span>{" "}
+            and{" "}
+            <span className="font-semibold text-blue-600">
+              On-Field
+            </span>{" "}
+            assignments, track progress and submit your work
+            efficiently.
           </p>
+
+          <div className="mt-8 flex flex-wrap gap-4">
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-4">
+              <p className="text-xs uppercase tracking-wider text-slate-500">
+                Active
+              </p>
+
+              <p className="mt-2 text-2xl font-bold text-slate-900">
+                {accepted}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-4">
+              <p className="text-xs uppercase tracking-wider text-slate-500">
+                Completed
+              </p>
+
+              <p className="mt-2 text-2xl font-bold text-green-600">
+                {completed}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-4">
+              <p className="text-xs uppercase tracking-wider text-slate-500">
+                Under Review
+              </p>
+
+              <p className="mt-2 text-2xl font-bold text-yellow-600">
+                {review}
+              </p>
+            </div>
+
+          </div>
 
         </div>
 
-        {/* Search */}
+      </div>
 
-        <div className="relative">
+      {/* ================= SEARCH ================= */}
+
+      <div className="flex flex-col gap-4 lg:flex-row">
+
+        <div className="relative flex-1">
 
           <Search
             size={20}
-            className="absolute left-4 top-3.5 text-slate-500"
+            className="absolute left-4 top-3.5 text-slate-400"
           />
 
           <input
-            placeholder="Search project..."
+            placeholder="Search tasks, skills or projects..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="
-              w-full
-              rounded-2xl
-              bg-slate-900
-              border
-              border-white/10
-              pl-12
-              pr-5
-              py-3
-              outline-none
-              text-white
-            "
+            className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-12 pr-5 text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
 
         </div>
 
-        {/* KPI Cards */}
+        <button className="rounded-2xl border border-slate-200 bg-white px-6 py-3 text-slate-700 shadow-sm transition hover:bg-slate-50">
+          Filter
+        </button>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+        <button className="rounded-2xl border border-slate-200 bg-white px-6 py-3 text-slate-700 shadow-sm transition hover:bg-slate-50">
+          Sort
+        </button>
 
-          <div className="rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 border border-cyan-500/20 p-6">
+      </div>
 
-            <div className="flex justify-between items-center">
+      {/* ================= KPI ================= */}
 
-              <div>
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
 
-                <p className="text-slate-400">
-                  Total Tasks
-                </p>
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
 
-                <h2 className="text-4xl font-bold text-white mt-3">
-                  {totalTasks}
-                </h2>
+          <div className="flex items-center justify-between">
 
-              </div>
+            <div>
 
-              <ClipboardList
-                size={40}
-                className="text-cyan-400"
-              />
+              <p className="text-slate-500">
+                Total Tasks
+              </p>
 
-            </div>
-
-          </div>
-
-          <div className="rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 border border-green-500/20 p-6">
-
-            <div className="flex justify-between items-center">
-
-              <div>
-
-                <p className="text-slate-400">
-                  Accepted
-                </p>
-
-                <h2 className="text-4xl font-bold text-green-400 mt-3">
-                  {accepted}
-                </h2>
-
-              </div>
-
-              <CheckCircle2
-                size={40}
-                className="text-green-400"
-              />
+              <h2 className="mt-3 text-4xl font-bold text-slate-900">
+                {totalTasks}
+              </h2>
 
             </div>
 
-          </div>
-
-          <div className="rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 border border-yellow-500/20 p-6">
-
-            <div className="flex justify-between items-center">
-
-              <div>
-
-                <p className="text-slate-400">
-                  Under Review
-                </p>
-
-                <h2 className="text-4xl font-bold text-yellow-400 mt-3">
-                  {review}
-                </h2>
-
-              </div>
-
-              <Clock3
-                size={40}
-                className="text-yellow-400"
-              />
-
-            </div>
-
-          </div>
-
-          <div className="rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 border border-purple-500/20 p-6">
-
-            <div className="flex justify-between items-center">
-
-              <div>
-
-                <p className="text-slate-400">
-                  Completed
-                </p>
-
-                <h2 className="text-4xl font-bold text-purple-400 mt-3">
-                  {completed}
-                </h2>
-
-              </div>
-
-              <Trophy
-                size={40}
-                className="text-purple-400"
-              />
-
-            </div>
+            <ClipboardList
+              size={42}
+              className="text-blue-600"
+            />
 
           </div>
 
         </div>
 
-                {/* Task List */}
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
 
-        {loading ? (
+          <div className="flex items-center justify-between">
 
-          <div className="rounded-3xl border border-white/10 bg-slate-900 p-12 text-center text-slate-400">
-            Loading your tasks...
-          </div>
+            <div>
 
-        ) : filteredTasks.length === 0 ? (
+              <p className="text-slate-500">
+                Accepted
+              </p>
 
-          <div className="rounded-3xl border border-white/10 bg-slate-900 p-12 text-center">
+              <h2 className="mt-3 text-4xl font-bold text-green-600">
+                {accepted}
+              </h2>
 
-            <ClipboardList
-              size={60}
-              className="mx-auto text-slate-600"
+            </div>
+
+            <CheckCircle2
+              size={42}
+              className="text-green-600"
             />
 
-            <h2 className="mt-6 text-2xl font-bold text-white">
-              No Tasks Found
+          </div>
+
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+
+          <div className="flex items-center justify-between">
+
+            <div>
+
+              <p className="text-slate-500">
+                Under Review
+              </p>
+
+              <h2 className="mt-3 text-4xl font-bold text-yellow-600">
+                {review}
+              </h2>
+
+            </div>
+
+            <Clock3
+              size={42}
+              className="text-yellow-600"
+            />
+
+          </div>
+
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+
+          <div className="flex items-center justify-between">
+
+            <div>
+
+              <p className="text-slate-500">
+                Completed
+              </p>
+
+              <h2 className="mt-3 text-4xl font-bold text-purple-600">
+                {completed}
+              </h2>
+
+            </div>
+
+            <Trophy
+              size={42}
+              className="text-purple-600"
+            />
+
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* ================= TASK LIST ================= */}
+
+{loading ? (
+
+  <div className="rounded-3xl border border-slate-200 bg-white shadow-sm p-12 text-center text-slate-600">
+    Loading your tasks...
+  </div>
+
+) : filteredTasks.length === 0 ? (
+
+  <div className="rounded-3xl border border-slate-200 bg-white shadow-sm p-12 text-center">
+
+    <ClipboardList
+      size={60}
+      className="mx-auto text-slate-400"
+    />
+
+    <h2 className="mt-6 text-2xl font-bold text-slate-900">
+      No Tasks Found
+    </h2>
+
+    <p className="mt-2 text-slate-600">
+      Apply for projects to see them here.
+    </p>
+
+  </div>
+
+) : (
+
+  <div className="grid gap-6 lg:grid-cols-2">
+
+    {filteredTasks.map((task) => (
+
+      <div
+        key={task.id}
+        className="
+          group
+          rounded-3xl
+          border
+          border-slate-200
+          bg-white
+          p-7
+          shadow-sm
+          transition-all
+          duration-300
+          hover:-translate-y-1
+          hover:shadow-xl
+          hover:border-blue-300
+        "
+      >
+
+        {/* Header */}
+
+        <div className="flex items-start justify-between">
+
+          <div>
+
+            <h2 className="text-2xl font-bold text-slate-900">
+              {task.project.title}
             </h2>
 
-            <p className="mt-2 text-slate-400">
-              Apply for projects to see them here.
+            <p className="mt-2 line-clamp-2 text-slate-500">
+              {task.project.description}
             </p>
 
           </div>
 
-        ) : (
+          <span
+            className={`rounded-full px-4 py-2 text-xs font-semibold ${
+              task.submission?.status === "APPROVED"
+                ? "bg-green-100 text-green-700"
+                : task.submission?.status === "REJECTED"
+                ? "bg-red-100 text-red-700"
+                : task.submission?.status === "PENDING"
+                ? "bg-yellow-100 text-yellow-700"
+                : "bg-blue-100 text-blue-700"
+            }`}
+          >
+            {task.submission
+              ? task.submission.status
+              : task.status}
+          </span>
 
-          <div className="grid lg:grid-cols-2 gap-6">
+        </div>
 
-            {filteredTasks.map((task) => (
+        {/* Information */}
 
-              <div
-                key={task.id}
-                className="
-                  rounded-3xl
-                  border
-                  border-white/10
-                  bg-slate-900
-                  p-7
-                  transition-all
-                  duration-300
-                  hover:border-cyan-500/40
-                  hover:-translate-y-1
-                "
-              >
+        <div className="mt-7 grid grid-cols-2 gap-5">
 
-                {/* Top */}
+          <div>
 
-                <div className="flex justify-between items-start">
+            <p className="text-xs uppercase tracking-wide text-slate-500">
+              Task Type
+            </p>
 
-                  <div>
-
-                    <h2 className="text-2xl font-bold text-white">
-                      {task.project.title}
-                    </h2>
-
-                    <p className="mt-2 text-slate-400 line-clamp-2">
-                      {task.project.description}
-                    </p>
-
-                  </div>
-
-                  <span
-                    className={`
-                      px-4
-                      py-2
-                      rounded-full
-                      text-xs
-                      font-semibold
-
-                      ${
-                        task.submission?.status === "APPROVED"
-                          ? "bg-green-500/20 text-green-400"
-                          : task.submission?.status === "REJECTED"
-                          ? "bg-red-500/20 text-red-400"
-                          : task.submission?.status === "PENDING"
-                          ? "bg-yellow-500/20 text-yellow-400"
-                          : "bg-blue-500/20 text-blue-400"
-                      }
-                    `}
-                  >
-                    {task.submission
-                      ? task.submission.status
-                      : task.status}
-                  </span>
-
-                </div>
-
-                {/* Information */}
-
-                <div className="grid grid-cols-2 gap-5 mt-7">
-
-                  <div>
-
-                    <p className="text-xs uppercase tracking-wide text-slate-500">
-                      Task Type
-                    </p>
-
-                    <span
-                      className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold ${
-                        task.project.taskType === "DIGITAL"
-                          ? "bg-cyan-500/20 text-cyan-400"
-                          : "bg-orange-500/20 text-orange-400"
-                      }`}
-                    >
-                      {task.project.taskType}
-                    </span>
-
-                  </div>
-
-                  <div>
-
-                    <p className="text-xs uppercase tracking-wide text-slate-500">
-                      Budget
-                    </p>
-
-                    <p className="mt-2 text-lg font-bold text-green-400">
-                       ₹{(task.project?.budget ?? 0).toLocaleString()}
-                    </p>
-
-                  </div>
-
-                  <div>
-
-                    <p className="text-xs uppercase tracking-wide text-slate-500">
-                      AI Match
-                    </p>
-
-                    <p className="mt-2 text-lg font-bold text-purple-400">
-                      {Math.round(task.matchScore)}%
-                    </p>
-
-                  </div>
-
-                  <div>
-
-                    <p className="text-xs uppercase tracking-wide text-slate-500">
-                      Skills
-                    </p>
-
-                    <p className="mt-2 text-white">
-                      {task.project.requiredSkills}
-                    </p>
-
-                  </div>
-
-                </div>
-
-                                {/* Progress */}
-
-                <div className="mt-7 rounded-2xl border border-white/10 bg-black/20 p-5">
-
-                  <div className="flex justify-between items-center">
-
-                    <p className="text-sm font-medium text-slate-300">
-                      Task Progress
-                    </p>
-
-                    <span className="text-sm text-slate-400">
-
-                      {!task.submission
-                        ? "40%"
-                        : task.submission.status === "PENDING"
-                        ? "80%"
-                        : task.submission.status === "APPROVED"
-                        ? "100%"
-                        : "60%"}
-
-                    </span>
-
-                  </div>
-
-                  <div className="mt-3 h-2 rounded-full bg-slate-800">
-
-                    <div
-                      className="h-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-700"
-                      style={{
-                        width:
-                          !task.submission
-                            ? "40%"
-                            : task.submission.status === "PENDING"
-                            ? "80%"
-                            : task.submission.status === "APPROVED"
-                            ? "100%"
-                            : "60%",
-                      }}
-                    />
-
-                  </div>
-
-                  <div className="mt-5">
-
-                    {!task.submission && (
-
-                      <p className="text-cyan-400 text-sm">
-                        📌 Complete this project and submit it from the
-                        <span className="font-semibold">
-                          {" "}Submit Work
-                        </span>
-                        {" "}page.
-                      </p>
-
-                    )}
-
-                    {task.submission?.status === "PENDING" && (
-
-                      <p className="text-yellow-400 text-sm">
-                        ⏳ Your work has been submitted successfully and is waiting for provider review.
-                      </p>
-
-                    )}
-
-                    {task.submission?.status === "APPROVED" && (
-
-                      <p className="text-green-400 text-sm">
-                        🎉 Great work! Your submission has been approved.
-                      </p>
-
-                    )}
-
-                    {task.submission?.status === "REJECTED" && (
-
-                      <p className="text-red-400 text-sm">
-                        ❌ Your submission was rejected. Please update your work and submit again.
-                      </p>
-
-                    )}
-
-                  </div>
-
-                </div>
-
-                {/* Footer */}
-
-                <div className="mt-7 flex justify-end">
-
-                  <button
-                    onClick={() => setSelectedTask(task)}
-                    className="
-                      flex
-                      items-center
-                      gap-2
-                      rounded-xl
-                      bg-gradient-to-r
-                      from-cyan-600
-                      to-blue-600
-                      px-6
-                      py-3
-                      font-medium
-                      text-white
-                      transition-all
-                      duration-300
-                      hover:scale-105
-                    "
-                  >
-                    <Eye size={18} />
-                    View Details
-                  </button>
-
-                </div>
-
-              </div>
-
-            ))}
+            <span
+              className="mt-2 inline-block rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-xs font-semibold"
+            >
+              {task.project.taskType}
+            </span>
 
           </div>
 
-        )}
+          <div>
 
-              {/* Project Details Modal */}
+            <p className="text-xs uppercase tracking-wide text-slate-500">
+              Budget
+            </p>
 
-      {selectedTask && (
+            <p className="mt-2 text-lg font-bold text-green-600">
+              ₹{(task.project?.budget ?? 0).toLocaleString()}
+            </p>
 
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md">
+          </div>
 
-          <div className="w-full max-w-3xl rounded-3xl border border-white/10 bg-slate-900 p-8 shadow-2xl">
+          <div>
 
-            {/* Header */}
+            <p className="text-xs uppercase tracking-wide text-slate-500">
+              AI Match
+            </p>
 
-            <div className="flex items-start justify-between">
+            <p className="mt-2 text-lg font-bold text-purple-600">
+              {Math.round(task.matchScore)}%
+            </p>
 
-              <div>
+          </div>
 
-                <h2 className="text-3xl font-bold text-white">
-                  {selectedTask.project?.title}
-                </h2>
+          <div>
 
-                <p className="mt-2 text-slate-400">
-                  Complete project information
-                </p>
+            <p className="text-xs uppercase tracking-wide text-slate-500">
+              Skills
+            </p>
 
-                <p className="mt-2 text-sm text-slate-500">
-                  Assigned on{" "}
-                  {new Date(selectedTask.createdAt).toLocaleDateString()}
-                </p>
+            <div className="mt-2 flex flex-wrap gap-2">
 
-              </div>
+              {task.project.requiredSkills
+                .split(",")
+                .map((skill) => (
 
-              <button
-                onClick={() => setSelectedTask(null)}
-                className="rounded-xl border border-white/10 px-4 py-2 text-slate-300 hover:bg-white/10"
-              >
-                Close
-              </button>
+                  <span
+                    key={skill}
+                    className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700"
+                  >
+                    {skill.trim()}
+                  </span>
 
-            </div>
-
-            {/* Description */}
-
-            <div className="mt-8">
-
-              <h3 className="mb-3 text-lg font-semibold text-white">
-                Description
-              </h3>
-
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-5 whitespace-pre-wrap text-slate-300">
-
-                {selectedTask.project?.description}
-
-              </div>
-
-            </div>
-
-            {/* Details */}
-
-            <div className="mt-8 grid grid-cols-2 gap-6">
-
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
-
-                <p className="text-sm text-slate-500">
-                  Task Type
-                </p>
-
-                <span
-                  className={`inline-block mt-3 rounded-full px-3 py-1 text-sm font-semibold ${
-                    selectedTask.project?.taskType === "DIGITAL"
-                      ? "bg-cyan-500/20 text-cyan-400"
-                      : "bg-orange-500/20 text-orange-400"
-                  }`}
-                >
-                  {selectedTask.project?.taskType}
-                </span>
-
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
-
-                <p className="text-sm text-slate-500">
-                  Budget
-                </p>
-
-                <p className="mt-3 text-xl font-bold text-green-400">
-                  ₹{selectedTask.project?.budget.toLocaleString()}
-                </p>
-
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
-
-                <p className="text-sm text-slate-500">
-                  Required Skills
-                </p>
-
-                <p className="mt-3 text-white">
-                  {selectedTask.project?.requiredSkills}
-                </p>
-
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
-
-                <p className="text-sm text-slate-500">
-                  AI Match
-                </p>
-
-                <p className="mt-3 text-xl font-bold text-purple-400">
-                  {Math.round(selectedTask.matchScore)}%
-                </p>
-
-              </div>
-
-            </div>
-
-            {/* Status */}
-
-            <div className="mt-8 rounded-2xl border border-white/10 bg-black/20 p-5">
-
-              <h3 className="mb-4 text-lg font-semibold text-white">
-                Current Status
-              </h3>
-
-              {!selectedTask.submission && (
-                <p className="text-cyan-400">
-                  📌 Complete your assigned work and submit it from the Submit Work page.
-                </p>
-              )}
-
-              {selectedTask.submission?.status === "PENDING" && (
-                <p className="text-yellow-400">
-                  ⏳ Your work is currently under provider review.
-                </p>
-              )}
-
-              {selectedTask.submission?.status === "APPROVED" && (
-                <p className="text-green-400">
-                  🎉 Congratulations! Your work has been approved successfully.
-                </p>
-              )}
-
-              {selectedTask.submission?.status === "REJECTED" && (
-                <p className="text-red-400">
-                  ❌ Your work was rejected. Please improve it and submit again.
-                </p>
-              )}
+                ))}
 
             </div>
 
@@ -656,8 +491,301 @@ export default function MyTasksPage() {
 
         </div>
 
-      )}
+        {/* ================= PROGRESS ================= */}
 
+<div className="mt-7 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+
+  <div className="flex items-center justify-between">
+
+    <p className="text-sm font-medium text-slate-700">
+      Task Progress
+    </p>
+
+    <span className="text-sm font-semibold text-slate-600">
+
+      {!task.submission
+        ? "40%"
+        : task.submission.status === "PENDING"
+        ? "80%"
+        : task.submission.status === "APPROVED"
+        ? "100%"
+        : "60%"}
+
+    </span>
+
+  </div>
+
+  <div className="mt-3 h-2 rounded-full bg-slate-200">
+
+    <div
+      className="h-2 rounded-full bg-blue-600 transition-all duration-700"
+      style={{
+        width:
+          !task.submission
+            ? "40%"
+            : task.submission.status === "PENDING"
+            ? "80%"
+            : task.submission.status === "APPROVED"
+            ? "100%"
+            : "60%",
+      }}
+    />
+
+  </div>
+
+  <div className="mt-5">
+
+    {!task.submission && (
+
+      <p className="text-sm text-blue-600">
+        📌 Complete this project and submit it from the{" "}
+        <span className="font-semibold">
+          Submit Work
+        </span>{" "}
+        page.
+      </p>
+
+    )}
+
+    {task.submission?.status === "PENDING" && (
+
+      <p className="text-sm text-yellow-600">
+        ⏳ Your work has been submitted successfully and is waiting for provider review.
+      </p>
+
+    )}
+
+    {task.submission?.status === "APPROVED" && (
+
+      <p className="text-sm text-green-600">
+        🎉 Great work! Your submission has been approved successfully.
+      </p>
+
+    )}
+
+    {task.submission?.status === "REJECTED" && (
+
+      <p className="text-sm text-red-600">
+        ❌ Your submission was rejected. Please improve your work and submit again.
+      </p>
+
+    )}
+
+  </div>
+
+</div>
+
+{/* ================= FOOTER ================= */}
+
+<div className="mt-7 flex justify-end">
+
+  <button
+    onClick={() => setSelectedTask(task)}
+    className="
+flex
+items-center
+gap-2
+rounded-xl
+bg-blue-600
+px-6
+py-3
+font-medium
+text-white
+shadow-md
+transition-all
+duration-300
+hover:bg-blue-700
+hover:shadow-lg
+"
+  >
+    <Eye size={18} />
+    View Details
+  </button>
+
+</div>
+
+</div>
+
+))}
+
+</div>
+
+)}
+
+{/* ================= PROJECT DETAILS MODAL ================= */}                  
+
+{selectedTask && (
+
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
+
+    <div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl">
+
+      {/* Header */}
+
+      <div className="flex items-start justify-between">
+
+        <div>
+
+          <h2 className="text-3xl font-bold text-slate-900">
+            {selectedTask.project.title}
+          </h2>
+
+          <p className="mt-2 text-slate-600">
+            Complete project information
+          </p>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Assigned on{" "}
+            {new Date(selectedTask.createdAt).toLocaleDateString()}
+          </p>
+
+        </div>
+
+        <button
+          onClick={() => setSelectedTask(null)}
+          className="rounded-xl border border-slate-200 bg-white px-5 py-2 text-slate-700 transition hover:bg-slate-100"
+        >
+          Close
+        </button>
+
+      </div>
+
+      {/* Description */}
+
+      <div className="mt-8">
+
+        <h3 className="mb-3 text-lg font-semibold text-slate-900">
+          Description
+        </h3>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 whitespace-pre-wrap text-slate-700 leading-7">
+
+          {selectedTask.project.description}
+
+        </div>
+
+      </div>
+
+      {/* Details */}
+
+      <div className="mt-8 grid grid-cols-2 gap-6">
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
+          <p className="text-sm text-slate-500">
+            Task Type
+          </p>
+
+          <span
+            className="inline-block mt-3 rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-sm font-semibold"
+          >
+            {selectedTask.project.taskType}
+          </span>
+
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
+          <p className="text-sm text-slate-500">
+            Budget
+          </p>
+
+          <p className="mt-3 text-xl font-bold text-green-600">
+            ₹{(selectedTask.project?.budget ?? 0).toLocaleString()}
+          </p>
+
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
+          <p className="text-sm text-slate-500">
+            Required Skills
+          </p>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+
+            {selectedTask.project.requiredSkills
+              .split(",")
+              .map((skill) => (
+
+                <span
+                  key={skill}
+                  className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700"
+                >
+                  {skill.trim()}
+                </span>
+
+              ))}
+
+          </div>
+
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
+          <p className="text-sm text-slate-500">
+            AI Match
+          </p>
+
+          <p className="mt-3 text-xl font-bold text-purple-600">
+            {Math.round(selectedTask.matchScore)}%
+          </p>
+
+        </div>
+
+      </div>
+
+      {/* Status */}
+
+      <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6">
+
+        <h3 className="mb-4 text-lg font-semibold text-slate-900">
+          Current Status
+        </h3>
+
+        {!selectedTask.submission && (
+
+          <p className="text-blue-600">
+            📌 Complete your assigned work and submit it from the
+            <span className="font-semibold">
+              {" "}Submit Work
+            </span>{" "}
+            page.
+          </p>
+
+        )}
+
+        {selectedTask.submission?.status === "PENDING" && (
+
+          <p className="text-yellow-600">
+            ⏳ Your work is currently under provider review.
+          </p>
+
+        )}
+
+        {selectedTask.submission?.status === "APPROVED" && (
+
+          <p className="text-green-600">
+            🎉 Congratulations! Your work has been approved successfully.
+          </p>
+
+        )}
+
+        {selectedTask.submission?.status === "REJECTED" && (
+
+          <p className="text-red-600">
+            ❌ Your work was rejected. Please improve it and submit again.
+          </p>
+
+        )}
+
+      </div>
+
+    </div>
+
+  </div>
+
+)}
 
             </div>
 

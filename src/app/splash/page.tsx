@@ -1,18 +1,21 @@
 "use client";
 
+import { useEffect } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
+
+import logo from "@/assets/images/logo.png";
 
 export default function SplashPage() {
   const router = useRouter();
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      const completed = localStorage.getItem("onboardingCompleted");
+      const hasSeenOnboarding = Cookies.get("hasSeenOnboarding");
 
-      if (completed) {
+      if (hasSeenOnboarding) {
         router.replace("/login");
       } else {
         router.replace("/onboarding");
@@ -23,171 +26,106 @@ export default function SplashPage() {
   }, [router]);
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#020617]">
-
-      {/* Background Gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950" />
-
-      {/* Aurora Glow */}
-      <motion.div
-        animate={{
-          x: [-30, 30, -30],
-          y: [0, -20, 0],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-blue-600/20 blur-[120px]"
-      />
-
-      <motion.div
-        animate={{
-          x: [30, -30, 30],
-          y: [0, 20, 0],
-        }}
-        transition={{
-          duration: 10,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="absolute -right-24 bottom-0 h-[28rem] w-[28rem] rounded-full bg-purple-600/20 blur-[140px]"
-      />
-
-      <motion.div
-        animate={{
-          y: [0, -25, 0],
-        }}
-        transition={{
-          duration: 6,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="absolute left-1/2 top-1/3 h-72 w-72 -translate-x-1/2 rounded-full bg-cyan-500/10 blur-[120px]"
-      />
-
-      {/* Floating Particles */}
-      {[...Array(20)].map((_, i) => (
-        <motion.span
-          key={i}
-          className="absolute rounded-full bg-white/20"
-          style={{
-            width: Math.random() * 4 + 2,
-            height: Math.random() * 4 + 2,
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-          }}
-          animate={{
-            y: [0, -30, 0],
-            opacity: [0.2, 1, 0.2],
-          }}
-          transition={{
-            duration: Math.random() * 4 + 3,
-            repeat: Infinity,
-            delay: Math.random() * 3,
-          }}
-        />
-      ))}
-
-      {/* Content */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1 }}
-        className="relative z-10 text-center px-6"
-      >
+    <div className="flex min-h-screen items-center justify-center bg-[#F8F8F6] px-6">
+      <div className="flex w-full max-w-md flex-col items-center text-center">
         {/* Logo */}
         <motion.div
-  initial={{ scale: 0.8, opacity: 0 }}
-  animate={{
-    scale: [0.9, 1.05, 1],
-    opacity: 1,
-    y: [0, -3, 0],
-  }}
-  transition={{
-    duration: 1.3,
-    y: {
-      duration: 4.5,
-      repeat: Infinity,
-      ease: "easeInOut",
-    },
-  }}
-  className="mb-8 flex justify-center"
->
-  <div
-    className="
-      rounded-[28px]
-      bg-white
-      p-2
-      shadow-[0_0_30px_rgba(59,130,246,0.30)]
-      ring-1
-      ring-white/20
-    "
-  >
-    <Image
-      src="/logo/logo.png"
-      alt="WorkLancer AI"
-      width={115}
-      height={115}
-      priority
-      className="rounded-[20px]"
-    />
-  </div>
-</motion.div>
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8 }}
+        >
+          <Image
+            src={logo}
+            alt="WorkLancer AI Logo"
+            width={180}
+            height={180}
+            priority
+            className="object-contain"
+          />
+        </motion.div>
+
         {/* Title */}
         <motion.h1
-  initial={{ opacity: 0, y: 15 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ delay: 0.5 }}
-  className="text-6xl font-extrabold tracking-[-0.04em] drop-shadow-[0_0_15px_rgba(255,255,255,0.08)]"
->
-  <span className="text-white">WorkLancer </span>
+          initial={{ opacity: 0, y: 25 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mt-6 text-5xl font-extrabold tracking-tight"
+        >
+          <span className="text-slate-900">WorkLancer </span>
+          <span className="text-blue-600">AI</span>
+        </motion.h1>
 
-  <span className="bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent">
-    AI
-  </span>
-</motion.h1>
-
-        {/* Tagline */}
+        {/* Subtitle */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-          className="mt-7 text-xl font-medium text-slate-300"
+          transition={{ delay: 0.5 }}
+          className="mt-3 text-xl font-medium text-slate-500"
         >
-          Where AI Connects Talent with Opportunity
+          Intelligent Workforce Platform
         </motion.p>
 
-        {/* Loading Bar */}
-        <div className="mx-auto mt-14 w-72 overflow-hidden rounded-full bg-slate-800">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: "100%" }}
-            transition={{
-              duration: 2.8,
-              ease: "easeInOut",
-            }}
-            className="h-1.5 rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 shadow-[0_0_18px_rgba(59,130,246,.9)]"
+        {/* Divider */}
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: 90 }}
+          transition={{ delay: 0.8 }}
+          className="mt-6 h-1 rounded-full bg-blue-600"
+        />
+
+        {/* Description */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+          className="mt-8 max-w-sm text-base leading-7 text-slate-600"
+        >
+          Connect Providers & Skilled Workers
+          <br />
+          with AI-powered collaboration.
+        </motion.p>
+
+        {/* Loading Dots */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.2 }}
+          className="mt-14 flex items-center gap-3"
+        >
+          <span
+            className="h-3 w-3 animate-bounce rounded-full bg-blue-300"
+            style={{ animationDelay: "0s" }}
           />
-        </div>
+          <span
+            className="h-3 w-3 animate-bounce rounded-full bg-blue-600"
+            style={{ animationDelay: "0.15s" }}
+          />
+          <span
+            className="h-3 w-3 animate-bounce rounded-full bg-violet-500"
+            style={{ animationDelay: "0.3s" }}
+          />
+        </motion.div>
 
         {/* Loading Text */}
         <motion.p
           initial={{ opacity: 0 }}
-          animate={{
-            opacity: [0.4, 1, 0.4],
-          }}
-          transition={{
-            delay: 1,
-            duration: 2,
-            repeat: Infinity,
-          }}
-          className="mt-7 text-sm uppercase tracking-[0.35em] text-slate-400"
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.4 }}
+          className="mt-5 text-base font-medium text-slate-500"
         >
-          Initializing AI Platform...
+          Loading...
         </motion.p>
-      </motion.div>
+
+        {/* Version */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.6 }}
+          className="mt-12 text-xs uppercase tracking-widest text-slate-400"
+        >
+          Version 1.0.0
+        </motion.p>
+      </div>
     </div>
   );
 }

@@ -1,105 +1,74 @@
-import axios from "axios";
 import api from "@/lib/api";
-
-export interface KycStatus {
-  status: string;
-  verifiedAt: string | null;
-  score: number | null;
-  report: any;
-  documents: {
-    idPhoto: string | null;
-    panCard: string | null;
-    selfie: string | null;
-    profilePhoto: string | null;
-  };
-  personalInfo: {
-    fullName: string;
-    email: string;
-    dob: string;
-    gender: string;
-    address: string;
-    city: string;
-    state: string;
-    pincode: string;
-    phone: string;
-    githubUrl?: string;
-    linkedinUrl?: string;
-  };
-}
-
-export interface KycVerificationReport {
-  identityMatch?: string;
-  ocrConfidence?: string;
-  documentQuality?: string;
-  faceMatch?: string;
-  fraudRisk?: string;
-  verificationScore?: string;
-  status?: string;
-  reasons?: string[];
-  recommendation?: string;
-}
+import authService from "./auth.service";
 
 class KycService {
-  async getStatus(): Promise<KycStatus> {
-    try {
-      const response = await api.get("/kyc/status");
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 400) {
-        return {
-          status: "NOT_STARTED",
-          verifiedAt: null,
-          score: null,
-          report: null,
-          documents: {
-            idPhoto: null,
-            panCard: null,
-            selfie: null,
-            profilePhoto: null,
-          },
-          personalInfo: {
-            fullName: "",
-            email: "",
-            dob: "",
-            gender: "",
-            address: "",
-            city: "",
-            state: "",
-            pincode: "",
-            phone: "",
-            githubUrl: "",
-            linkedinUrl: "",
-          },
-        };
-      }
+  private getUserId() {
+    const user = authService.getUser();
 
-      throw error;
+    if (!user) {
+      throw new Error("User not logged in");
     }
+
+    return user.id;
   }
 
-  async updatePersonalInfo(data: {
+  async getStatus() {
+    const userId = this.getUserId();
+
+    const response = await api.get(`/kyc/status/${userId}`);
+
+    return response.data;
+  }
+
+  async savePersonalInfo(data: {
     fullName: string;
     dob: string;
     gender: string;
+    phone: string;
     address: string;
     city: string;
     state: string;
     pincode: string;
-    phone: string;
-    githubUrl?: string;
-    linkedinUrl?: string;
   }) {
-    const response = await api.post("/kyc/personal-info", data);
+    const userId = this.getUserId();
+
+    const response = await api.post(
+      `/kyc/personal-info/${userId}`,
+      data,
+    );
+
     return response.data;
   }
 
-  async uploadDocuments(data: FormData) {
-    const response = await api.post("/kyc/documents", data);
+  async uploadDocument(
+    type: "aadhaar" | "pan" | "selfie",
+    file: File,
+  ) {
+    const userId = this.getUserId();
+
+    const formData = new FormData();
+
+    formData.append("file", file);
+
+    const response = await api.post(
+      `/kyc/documents/${type}/${userId}`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    );
+
     return response.data;
   }
 
-  async verify(): Promise<{ steps: string[]; report: KycVerificationReport }> {
-    const response = await api.post("/kyc/verify");
+  // 👇 ADD THIS METHOD
+  async verifyKyc() {
+    const userId = this.getUserId();
+
+    const response = await api.post(`/kyc/verify/${userId}`);
+
     return response.data;
   }
 }

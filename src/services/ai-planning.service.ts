@@ -1,13 +1,44 @@
 import api from "@/lib/api";
-import type { ProjectPlanRequest, ProjectPlanResponse, SavedPlan, UpdatePlanInput } from "@/types/ai-planning";
+import type {
+  ProjectPlanRequest,
+  ProjectPlanResponse,
+  SavedPlan,
+  UpdatePlanInput,
+} from "@/types/ai-planning";
 
 class AIPlanningService {
   async generatePlan(data: ProjectPlanRequest): Promise<ProjectPlanResponse> {
-    const response = await api.post<ProjectPlanResponse>("/ai/project-plan", data);
+    const payload = {
+      ...data,
+
+      budget:
+        data.budget && data.budget !== ""
+          ? Number(data.budget)
+          : undefined,
+
+      teamSize:
+        data.teamSize && data.teamSize !== ""
+          ? Number(data.teamSize)
+          : undefined,
+    };
+
+    console.log("AI Planning Payload:", payload);
+
+    const response = await api.post<ProjectPlanResponse>(
+      "/ai/project-plan",
+      payload
+    );
+
+    console.log("AI Planning Response:", response.data);
+
     return response.data;
   }
 
-  async savePlan(data: ProjectPlanRequest & { planData: ProjectPlanResponse; projectId?: string; userId?: string }): Promise<SavedPlan> {
+  async savePlan(data: ProjectPlanRequest & {
+    planData: ProjectPlanResponse;
+    projectId?: string;
+    userId?: string;
+  }): Promise<SavedPlan> {
     const response = await api.post<SavedPlan>("/ai/project-plan/save", data);
     return response.data;
   }
@@ -23,7 +54,10 @@ class AIPlanningService {
   }
 
   async updateSavedPlan(id: string, data: UpdatePlanInput): Promise<SavedPlan> {
-    const response = await api.patch<SavedPlan>(`/ai/project-plan/${id}`, data);
+    const response = await api.patch<SavedPlan>(
+      `/ai/project-plan/${id}`,
+      data
+    );
     return response.data;
   }
 

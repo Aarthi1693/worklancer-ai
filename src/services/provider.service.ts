@@ -36,6 +36,12 @@ class ProviderService {
     );
     return response.data;
   }
+
+  // Assigned Masters
+  async getAssignedMasters() {
+    const response = await api.get("/provider/assigned-masters");
+    return response.data;
+  }
 }
 
 export default new ProviderService();

@@ -1,9 +1,22 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, CheckCircle2, AlertCircle, Info, XCircle } from "lucide-react";
+import {
+  X,
+  CheckCircle2,
+  AlertCircle,
+  Info,
+  XCircle,
+} from "lucide-react";
 
 type ToastType = "success" | "error" | "info" | "warning";
 
@@ -23,23 +36,48 @@ const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
 export function useToast() {
   const context = useContext(ToastContext);
-  if (!context) throw new Error("useToast must be used within ToastProvider");
+
+  if (!context) {
+    throw new Error("useToast must be used within ToastProvider");
+  }
+
   return context;
 }
 
-export function ToastProvider({ children }: { children: ReactNode }) {
+export function ToastProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const [mounted, setMounted] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const addToast = useCallback((message: string, type: ToastType = "info") => {
-    const id = Math.random().toString(36).slice(2, 9);
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
+  useEffect(() => {
+    setMounted(true);
   }, []);
 
+  const addToast = useCallback(
+    (message: string, type: ToastType = "info") => {
+      const id = crypto.randomUUID();
+
+      setToasts((prev) => [
+        ...prev,
+        {
+          id,
+          message,
+          type,
+        },
+      ]);
+
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((toast) => toast.id !== id));
+      }, 4000);
+    },
+    []
+  );
+
   const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
   const icons: Record<ToastType, ReactNode> = {
@@ -50,9 +88,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <ToastContext.Provider value={{ toasts, addToast, removeToast }}>
+    <ToastContext.Provider
+      value={{
+        toasts,
+        addToast,
+        removeToast,
+      }}
+    >
       {children}
-      {typeof document !== "undefined" &&
+
+      {mounted &&
         createPortal(
           <div className="fixed top-6 right-6 z-[100] flex flex-col gap-3">
             <AnimatePresence>
@@ -63,14 +108,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -20, scale: 0.95 }}
                   transition={{ duration: 0.2 }}
-                  className="
-                    flex items-center gap-3 rounded-xl border border-white/10
-                    bg-slate-900/95 backdrop-blur-xl px-4 py-3 shadow-2xl
-                    min-w-[320px] max-w-md
-                  "
+                  className="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-900/95 backdrop-blur-xl px-4 py-3 shadow-2xl min-w-[320px] max-w-md"
                 >
                   {icons[toast.type]}
-                  <p className="flex-1 text-sm text-slate-200">{toast.message}</p>
+
+                  <p className="flex-1 text-sm text-slate-200">
+                    {toast.message}
+                  </p>
+
                   <button
                     onClick={() => removeToast(toast.id)}
                     className="text-slate-500 hover:text-white transition-colors"

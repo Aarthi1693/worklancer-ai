@@ -11,22 +11,34 @@ export interface ProjectPlanRequest {
 }
 
 export interface ProjectPlanResponse {
-  summary: string;
-  roadmap: Array<{
+  summary?: string;
+  projectSummary?: string;
+  roadmap?: Array<{
     phase: string;
-    duration: string;
-    tasks: string[];
+    duration?: string;
+    tasks?: string[];
+    description?: string;
   }>;
-  roles: Array<{
+  developmentRoadmap?: Array<{
+    phase: string;
+    duration?: string;
+    tasks?: string[];
+    description?: string;
+  }>;
+  roles?: Array<{
     role: string;
     responsibility: string;
   }>;
+  recommendedTeamRoles?: string[];
   requiredSkills: string[];
-  timeline: string;
-  riskAnalysis: Array<{
-    risk: string;
-    solution: string;
+  timeline?: string;
+  estimatedTimeline?: string;
+  budgetSuggestion?: string;
+  milestones?: Array<{
+    name: string;
+    date: string;
   }>;
+  riskAnalysis: string[];
   recommendations: string[];
 }
 

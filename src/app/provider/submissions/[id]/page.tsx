@@ -12,6 +12,11 @@ import { motion } from "framer-motion";
 import { submissionService } from "@/services/submission.service";
 import { paymentService } from "@/services/payment.service";
 import { Payment, PaymentStatus } from "@/types/payment";
+import { useSubmissionSocket } from "@/hooks/useSubmissionSocket";
+import {
+  emitSubmissionUpdated,
+  SubmissionEventPayload,
+} from "@/services/socket.service";
 
 interface SubmissionDetail {
   id: string;
@@ -40,11 +45,11 @@ interface SubmissionDetail {
 }
 
 const statusConfig: Record<string, { color: string; label: string }> = {
-  PENDING: { color: "border-yellow-500/30 bg-yellow-500/10 text-yellow-400", label: "Pending Review" },
-  PENDING_REVIEW: { color: "border-yellow-500/30 bg-yellow-500/10 text-yellow-400", label: "Pending Review" },
-  APPROVED: { color: "border-green-500/30 bg-green-500/10 text-green-400", label: "Approved" },
-  REVISION_REQUIRED: { color: "border-orange-500/30 bg-orange-500/10 text-orange-400", label: "Revision Required" },
-  REJECTED: { color: "border-red-500/30 bg-red-500/10 text-red-400", label: "Rejected" },
+  PENDING: { color: "bg-amber-100 text-amber-700", label: "Pending Review" },
+  PENDING_REVIEW: { color: "bg-amber-100 text-amber-700", label: "Pending Review" },
+  APPROVED: { color: "bg-green-100 text-green-700", label: "Approved" },
+  REVISION_REQUIRED: { color: "bg-orange-100 text-orange-700", label: "Revision Required" },
+  REJECTED: { color: "bg-red-100 text-red-700", label: "Rejected" },
 };
 
 function SubmissionDetailContent() {
@@ -99,11 +104,27 @@ function SubmissionDetailContent() {
   }, [submissionId, loadSubmission, loadPayment]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  useSubmissionSocket({
+    onUpdated: (payload: SubmissionEventPayload) => {
+      if (payload.submissionId !== submissionId) return;
+      setSubmission((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: payload.status ?? prev.status,
+              feedback: payload.feedback ?? prev.feedback,
+            }
+          : prev
+      );
+    },
+  });
+
   const handleApprove = async () => {
     try {
       setActionLoading(true);
-      await submissionService.approveSubmission(submissionId, feedback);
+      await submissionService.approveSubmission(submissionId);
       addToast("Submission approved successfully!", "success");
+      emitSubmissionUpdated({ submissionId, status: "APPROVED" });
       loadSubmission();
       loadPayment();
     } catch (error) {
@@ -123,8 +144,9 @@ function SubmissionDetailContent() {
     }
     try {
       setActionLoading(true);
-      await submissionService.requestChanges(submissionId, feedback);
+      await submissionService.requestChanges(submissionId);
       addToast("Changes requested successfully!", "success");
+      emitSubmissionUpdated({ submissionId, status: "REVISION_REQUIRED" });
       loadSubmission();
     } catch (error) {
       console.error("Failed to request changes:", error);
@@ -143,8 +165,9 @@ function SubmissionDetailContent() {
     }
     try {
       setActionLoading(true);
-      await submissionService.rejectSubmission(submissionId, feedback, rejectReason);
+      await submissionService.rejectSubmission(submissionId);
       addToast("Submission rejected.", "success");
+      emitSubmissionUpdated({ submissionId, status: "REJECTED" });
       loadSubmission();
     } catch (error) {
       console.error("Failed to reject:", error);
@@ -185,9 +208,11 @@ function SubmissionDetailContent() {
   if (!submission) {
     return (
       <div className="text-center py-20">
-        <h2 className="text-2xl font-bold text-white mb-4">Submission Not Found</h2>
-        <p className="text-slate-400 mb-6">The requested submission could not be found.</p>
-        <Button onClick={() => router.push("/provider/submissions")}>Back to Submissions</Button>
+        <h2 className="text-2xl font-bold text-slate-900 mb-4">Submission Not Found</h2>
+        <p className="text-slate-500 mb-6">The requested submission could not be found.</p>
+        <Button onClick={() => router.back()}>
+  Back
+</Button>
       </div>
     );
   }
@@ -202,16 +227,16 @@ function SubmissionDetailContent() {
         <div>
           <div className="flex items-center gap-3 mb-2">
             <button
-              onClick={() => router.push("/provider/submissions")}
-              className="text-slate-400 hover:text-white transition-colors"
-            >
-              <ArrowLeft size={24} />
-            </button>
-            <h1 className="text-3xl font-bold text-white">Submission Review</h1>
+  onClick={() => router.back()}
+  className="text-slate-400 hover:text-slate-900 transition-colors"
+>
+  <ArrowLeft size={24} />
+</button>
+            <h1 className="text-3xl font-bold text-slate-900">Submission Review</h1>
           </div>
-          <p className="text-slate-400 ml-9">Review and take action on this submission.</p>
+          <p className="text-slate-500 ml-9">Review and take action on this submission.</p>
         </div>
-        <Badge variant="outline" className={`${statusConfig[submission.status]?.color || "border-white/10 text-slate-300"} rounded-lg text-sm`}>
+        <Badge variant="outline" className={`${statusConfig[submission.status]?.color || "border-slate-200 text-slate-500"} rounded-lg text-sm`}>
           {statusConfig[submission.status]?.label || submission.status}
         </Badge>
       </div>
@@ -222,32 +247,32 @@ function SubmissionDetailContent() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="
-              rounded-3xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl
-              shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6
+              rounded-3xl border border-slate-200 bg-white backdrop-blur-xl
+              shadow-md p-6
             "
           >
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <FileText className="text-blue-400" size={20} />
+            <h2 className="text-xl font-semibold mb-4 text-slate-900 flex items-center gap-2">
+              <FileText className="text-blue-600" size={20} />
               Project Information
             </h2>
             <div className="space-y-3">
               <div>
-                <p className="text-sm text-slate-400">Project Title</p>
-                <p className="text-white font-medium">{project.title || "N/A"}</p>
+                <p className="text-sm text-slate-500">Project Title</p>
+                <p className="text-slate-900 font-medium">{project.title || "N/A"}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-slate-400">Task Type</p>
-                  <p className="text-white">{project.taskType || "N/A"}</p>
+                  <p className="text-sm text-slate-500">Task Type</p>
+                  <p className="text-slate-900">{project.taskType || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-slate-400">Budget</p>
-                  <p className="text-white">₹{project.budget || "0"}</p>
+                  <p className="text-sm text-slate-500">Budget</p>
+                  <p className="text-slate-900">₹{project.budget || "0"}</p>
                 </div>
               </div>
               <div>
-                <p className="text-sm text-slate-400">Project Status</p>
-                <p className="text-white">{project.status || "N/A"}</p>
+                <p className="text-sm text-slate-500">Project Status</p>
+                <p className="text-slate-900">{project.status || "N/A"}</p>
               </div>
             </div>
           </motion.div>
@@ -257,22 +282,22 @@ function SubmissionDetailContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="
-              rounded-3xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl
-              shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6
+              rounded-3xl border border-slate-200 bg-white backdrop-blur-xl
+              shadow-md p-6
             "
           >
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <User className="text-purple-400" size={20} />
+            <h2 className="text-xl font-semibold mb-4 text-slate-900 flex items-center gap-2">
+              <User className="text-purple-600" size={20} />
               Freelancer Information
             </h2>
             <div className="space-y-3">
               <div>
-                <p className="text-sm text-slate-400">Name</p>
-                <p className="text-white font-medium">{applicant.name || "N/A"}</p>
+                <p className="text-sm text-slate-500">Name</p>
+                <p className="text-slate-900 font-medium">{applicant.name || "N/A"}</p>
               </div>
               <div>
-                <p className="text-sm text-slate-400">Email</p>
-                <p className="text-white">{applicant.email || "N/A"}</p>
+                <p className="text-sm text-slate-500">Email</p>
+                <p className="text-slate-900">{applicant.email || "N/A"}</p>
               </div>
             </div>
           </motion.div>
@@ -282,12 +307,12 @@ function SubmissionDetailContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             className="
-              rounded-3xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl
-              shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6
+              rounded-3xl border border-slate-200 bg-white backdrop-blur-xl
+              shadow-md p-6
             "
           >
-            <h2 className="text-xl font-semibold mb-4">Submission Notes</h2>
-            <p className="text-slate-300 whitespace-pre-wrap">{submission.description || "No description provided."}</p>
+            <h2 className="text-xl font-semibold mb-4 text-slate-900">Submission Notes</h2>
+            <p className="text-slate-900 whitespace-pre-wrap">{submission.description || "No description provided."}</p>
           </motion.div>
 
           {(submission.githubLink || submission.deploymentLink || submission.reportFile) && (
@@ -296,26 +321,26 @@ function SubmissionDetailContent() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
               className="
-                rounded-3xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl
-                shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6
+                rounded-3xl border border-slate-200 bg-white backdrop-blur-xl
+                shadow-md p-6
               "
             >
-              <h2 className="text-xl font-semibold mb-4">Links & Files</h2>
+              <h2 className="text-xl font-semibold mb-4 text-slate-900">Links & Files</h2>
               <div className="space-y-3">
                 {submission.githubLink && (
-                  <a href={submission.githubLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-400 hover:text-blue-300">
+                  <a href={submission.githubLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:text-blue-700">
                     <ExternalLink size={16} />
                     GitHub Repository
                   </a>
                 )}
                 {submission.deploymentLink && (
-                  <a href={submission.deploymentLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-green-400 hover:text-green-300">
+                  <a href={submission.deploymentLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-green-600 hover:text-green-700">
                     <ExternalLink size={16} />
                     Live Demo
                   </a>
                 )}
                 {submission.reportFile && (
-                  <a href={submission.reportFile} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-purple-400 hover:text-purple-300">
+                  <a href={submission.reportFile} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-purple-600 hover:text-purple-700">
                     <FileText size={16} />
                     Uploaded File
                   </a>
@@ -329,12 +354,12 @@ function SubmissionDetailContent() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="
-                rounded-3xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl
-                shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6
+                rounded-3xl border border-slate-200 bg-white backdrop-blur-xl
+                shadow-md p-6
               "
             >
-              <h2 className="text-xl font-semibold mb-4">Feedback</h2>
-              <p className="text-slate-300 whitespace-pre-wrap">{submission.feedback}</p>
+              <h2 className="text-xl font-semibold mb-4 text-slate-900">Feedback</h2>
+              <p className="text-slate-900 whitespace-pre-wrap">{submission.feedback}</p>
             </motion.div>
           )}
 
@@ -343,29 +368,29 @@ function SubmissionDetailContent() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="
-                rounded-3xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl
-                shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6
+                rounded-3xl border border-slate-200 bg-white backdrop-blur-xl
+                shadow-md p-6
               "
             >
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <CreditCard className="text-green-400" size={20} />
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-900">
+                <CreditCard className="text-green-600" size={20} />
                 Payment Status
               </h2>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Amount</span>
-                  <span className="text-white font-semibold">₹{(payment.amount ?? 0).toLocaleString()}</span>
+                  <span className="text-slate-500">Amount</span>
+                  <span className="text-slate-900 font-semibold">₹{(payment.amount ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Status</span>
+                  <span className="text-slate-500">Status</span>
                   <Badge
                     variant="outline"
                     className={`${
                       payment.status === PaymentStatus.RELEASED
-                        ? "border-green-500/30 bg-green-500/10 text-green-400"
+                        ? "border-green-200 bg-green-50 text-green-700"
                         : payment.status === PaymentStatus.PENDING || payment.status === PaymentStatus.HELD
-                        ? "border-yellow-500/30 bg-yellow-500/10 text-yellow-400"
-                        : "border-red-500/30 bg-red-500/10 text-red-400"
+                        ? "border-yellow-200 bg-yellow-50 text-yellow-700"
+                        : "border-red-200 bg-red-50 text-red-700"
                     } rounded-lg`}
                   >
                     {payment.status}
@@ -373,21 +398,21 @@ function SubmissionDetailContent() {
                 </div>
                 {payment.transactionId && (
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Transaction ID</span>
-                    <span className="text-white font-mono text-sm">{payment.transactionId}</span>
+                    <span className="text-slate-500">Transaction ID</span>
+                    <span className="text-slate-900 font-mono text-sm">{payment.transactionId}</span>
                   </div>
                 )}
                 {payment.status === PaymentStatus.RELEASED && (
-                  <div className="space-y-3 mt-4 p-4 rounded-xl border border-green-500/20 bg-green-500/5">
+                  <div className="space-y-3 mt-4 p-4 rounded-xl border border-green-200 bg-green-50">
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 className="text-green-400" size={18} />
-                      <span className="text-slate-400">Payment Status:</span>
-                      <span className="text-green-400 font-semibold">✅ Released</span>
+                      <CheckCircle2 className="text-green-600" size={18} />
+                      <span className="text-slate-500">Payment Status:</span>
+                      <span className="text-green-700 font-semibold">✅ Released</span>
                     </div>
                     {payment.releasedAt && (
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400">Released On:</span>
-                        <span className="text-white">{new Date(payment.releasedAt).toLocaleString()}</span>
+                        <span className="text-slate-500">Released On:</span>
+                        <span className="text-slate-900">{new Date(payment.releasedAt).toLocaleString()}</span>
                       </div>
                     )}
                   </div>
@@ -446,29 +471,29 @@ function SubmissionDetailContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="
-              rounded-3xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl
-              shadow-[0_0_40px_rgba(59,130,246,0.08)] p-6
+              rounded-3xl border border-slate-200 bg-white backdrop-blur-xl
+              shadow-md p-6
             "
           >
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Calendar className="text-blue-400" size={18} />
+            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+              <Calendar className="text-blue-600" size={18} />
               Timeline
             </h3>
             <div className="space-y-3 text-sm">
               <div>
-                <p className="text-slate-400">Submitted Date</p>
-                <p className="text-white">{new Date(submission.createdAt).toLocaleString()}</p>
+                <p className="text-slate-500">Submitted Date</p>
+                <p className="text-slate-900">{new Date(submission.createdAt).toLocaleString()}</p>
               </div>
               {submission.reviewedAt && (
                 <div>
-                  <p className="text-slate-400">Reviewed Date</p>
-                  <p className="text-white">{new Date(submission.reviewedAt).toLocaleString()}</p>
+                  <p className="text-slate-500">Reviewed Date</p>
+                  <p className="text-slate-900">{new Date(submission.reviewedAt).toLocaleString()}</p>
                 </div>
               )}
               {submission.approvedAt && (
                 <div>
-                  <p className="text-slate-400">Approved Date</p>
-                  <p className="text-white">{new Date(submission.approvedAt).toLocaleString()}</p>
+                  <p className="text-slate-500">Approved Date</p>
+                  <p className="text-slate-900">{new Date(submission.approvedAt).toLocaleString()}</p>
                 </div>
               )}
             </div>
@@ -487,12 +512,26 @@ function SubmissionDetailContent() {
         variant="primary"
       >
         <div className="mt-4">
-          <label className="block text-sm font-medium text-slate-300 mb-2">Feedback (optional)</label>
+          <label className="block text-sm font-medium text-slate-500 mb-2">Feedback (optional)</label>
           <textarea
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
             rows={3}
-            className="w-full p-3 rounded-xl bg-slate-800 border border-white/10 text-white text-sm"
+            className="
+              w-full
+              rounded-xl
+              border
+              border-slate-300
+              bg-white
+              p-3
+              text-sm
+              text-slate-900
+              placeholder:text-slate-400
+              focus:border-blue-500
+              focus:outline-none
+              focus:ring-2
+              focus:ring-blue-100
+            "
             placeholder="Add optional feedback..."
           />
         </div>
@@ -509,12 +548,12 @@ function SubmissionDetailContent() {
         variant="primary"
       >
         <div className="mt-4">
-          <label className="block text-sm font-medium text-slate-300 mb-2">Feedback *</label>
+          <label className="block text-sm font-medium text-slate-500 mb-2">Feedback *</label>
           <textarea
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
             rows={4}
-            className="w-full p-3 rounded-xl bg-slate-800 border border-white/10 text-white text-sm"
+            className="w-full p-3 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm"
             placeholder="Describe what needs to be improved..."
           />
         </div>
@@ -532,22 +571,22 @@ function SubmissionDetailContent() {
       >
         <div className="mt-4 space-y-3">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Feedback *</label>
+            <label className="block text-sm font-medium text-slate-500 mb-2">Feedback *</label>
             <textarea
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
               rows={3}
-              className="w-full p-3 rounded-xl bg-slate-800 border border-white/10 text-white text-sm"
+              className="w-full p-3 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm"
               placeholder="Provide feedback..."
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Reason *</label>
+            <label className="block text-sm font-medium text-slate-500 mb-2">Reason *</label>
             <textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               rows={2}
-              className="w-full p-3 rounded-xl bg-slate-800 border border-white/10 text-white text-sm"
+              className="w-full p-3 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm"
               placeholder="Reason for rejection..."
             />
           </div>
