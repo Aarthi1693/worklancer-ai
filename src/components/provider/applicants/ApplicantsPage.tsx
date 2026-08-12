@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-
+import { useRouter } from "next/navigation";
 import ApplicantsHeader from "./ApplicantsHeader";
 import ApplicantStats from "./ApplicantStats";
 import ApplicantFilters from "./ApplicantFilters";
@@ -190,7 +189,7 @@ return {
 }
 
 export default function ApplicantsPage() {
-  const searchParams = useSearchParams();
+  
   const router = useRouter();
 
   const [activeFilter, setActiveFilter] = useState("All");
@@ -265,11 +264,9 @@ const loadApplicants = async () => {
   }
 };
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadApplicants();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+ useEffect(() => {
+  loadApplicants();
+}, []);
 
   const filteredApplicants = applicants.filter((applicant) => {
     const matchesSearch =

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import DesktopLayout from "@/components/layout/desktop-layout";
 
@@ -13,29 +13,27 @@ import AIInsights from "@/components/provider/create-task/AIInsights";
 
 export default function CreateTaskPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [taskType, setTaskType] = useState<"digital" | "field">("digital");
 
   useEffect(() => {
-    const requestedTaskType = searchParams.get("taskType");
-    if (requestedTaskType === "field") {
-      setTaskType("field");
-      return;
-    }
+  const requestedTaskType =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("taskType")
+      : null;
 
-    if (requestedTaskType === "digital") {
-      setTaskType("digital");
-    }
-  }, [searchParams]);
+  if (requestedTaskType === "field") {
+    setTaskType("field");
+  } else if (requestedTaskType === "digital") {
+    setTaskType("digital");
+  }
+}, []);
 
   return (
     <DesktopLayout>
       <div className="space-y-8">
 
-        <CreateTaskHeader
-          onBack={() => router.push("/provider")}
-        />
+        <CreateTaskHeader />
 
         <TaskTypeSelector
           taskType={taskType}

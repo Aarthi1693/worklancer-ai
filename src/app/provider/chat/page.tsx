@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import Cookies from "js-cookie";
 
 import DesktopLayout from "@/components/layout/desktop-layout";
@@ -18,7 +17,6 @@ import { setChatUnreadTotal } from "@/lib/chatUnread";
 import { getSocket } from "@/services/socket.service";
 
 export default function ProviderChatPage() {
-  const searchParams = useSearchParams();
 
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [conversations, setConversations] = useState<any[]>([]);
@@ -46,7 +44,9 @@ export default function ProviderChatPage() {
       }
     });
 
-    return () => socket.off("receiveMessage");
+    return () => {
+  socket.off("receiveMessage");
+};
   }, [selectedConversation]);
 
   async function loadConversations() {
@@ -65,7 +65,10 @@ export default function ProviderChatPage() {
         )
       );
 
-      const conversationId = searchParams.get("conversationId");
+      const conversationId =
+  typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("conversationId")
+    : null;
 
       const target =
         data.find((c: any) => c.id === conversationId) ||
