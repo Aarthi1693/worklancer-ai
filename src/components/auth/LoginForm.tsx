@@ -31,6 +31,11 @@ export default function LoginForm() {
     try {
       setLoading(true);
 
+      console.log({
+  email,
+  password,
+});
+
       const response = await authService.login({
         email,
         password,
